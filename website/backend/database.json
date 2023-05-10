@@ -1,0 +1,4 @@
+{
+  "tasks": { "1": { "id": 1, "name": "Do a task", "completed": false } },
+  "users": { "1": { "id": 1, "username": "hello", "password": "hello2" } }
+}
