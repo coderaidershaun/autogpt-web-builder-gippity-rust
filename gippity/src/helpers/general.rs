@@ -3,6 +3,7 @@ use reqwest::Client;
 
 use std::fs;
 
+pub const BACKEND_CODE_DIR: &str = "/Users/shaun/Code/DEVELOPMENT/autogippity/website/backend";
 
 /// Takes in both the string version of an AI function
 /// Combines this with the user input to encourage a structured printout in a program-like response
@@ -32,15 +33,22 @@ pub async fn check_status_code(client: &Client, url: &str) -> Result<u16, reqwes
 }
 
 
+// Get backend working directory
+fn backend_working_directory() {
+  let directory: &str = "/Users/shaun/Code/DEVELOPMENT/autogippity/website/backend";
+
+}
+
+
 // Get code template
 pub fn read_code_template_contents() -> String {
-  let path: &str = "/Users/shaun/Code/DEVELOPMENT/autogippity/website/backend/src/codetemplate.rs";
+  let path: String = format!("{}/src/codetemplate.rs", BACKEND_CODE_DIR);
   fs::read_to_string(path).expect("Something went wrong reading the file")
 }
 
 // Save backend code
-pub fn save_backend_code() -> String {
-  let path: &str = "/Users/shaun/Code/DEVELOPMENT/autogippity/website/backend/src/main.rs";
-  fs::read_to_string(path).expect("Something went wrong reading the file")
+pub fn save_backend_code(contents: &String) {
+  let path: String = format!("{}/src/main.rs", BACKEND_CODE_DIR);
+  fs::write(path, contents)
+    .expect("Something went wrong saving the file");
 }
-

@@ -19,7 +19,7 @@ impl AgentSolutionArchitect {
 
     // Define attributes
     let attributes: BasicAgent = BasicAgent {
-      objective: "gather information and design solutions for website builds using rust on backend and react on frontend".to_string(),
+      objective: "Gathers information and design solutions for website builds".to_string(),
       position: "Solutions Architect".to_string(),
       state: AgentState::Discovery,
       memory: vec![]

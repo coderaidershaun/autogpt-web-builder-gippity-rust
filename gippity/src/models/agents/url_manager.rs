@@ -22,7 +22,7 @@ impl AgentUrlManager {
 
     // Define attributes
     let attributes: BasicAgent = BasicAgent {
-      objective: "detect what urls will be required for use within the website application".to_string(),
+      objective: "Discovers and lists external urls if needed".to_string(),
       position: "URL Manager".to_string(),
       state: AgentState::Discovery,
       memory: vec![]
@@ -173,7 +173,8 @@ pub mod tests {
 
     // Execute running agent
     agent.execute(&mut factsheet).await.expect("Unable to execute running agent");
-    println!("{:?}", &factsheet);
+    let json_factsheet: String = serde_json::to_string(&factsheet).unwrap();
+    println!("{:?}", json_factsheet);
     assert!(factsheet.external_urls.unwrap().len() > 0);
   }
 }

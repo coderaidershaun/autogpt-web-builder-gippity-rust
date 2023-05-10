@@ -1,9 +1,15 @@
+use crate::helpers::general::{
+  extend_ai_function, 
+  check_status_code, 
+  read_code_template_contents, 
+  save_backend_code, 
+  BACKEND_CODE_DIR
+};
+use crate::ai_functions::backend_developer::{print_backend_webserver_code, print_improved_webserver_code, print_fixed_code};
 use crate::models::agent_basic::basic_agent::{BasicAgent, AgentState};
 use crate::models::agent_basic::basic_traits::BasicTraits;
 use crate::models::agents::agent_traits::{SpecialFunctions, FactSheet};
 use crate::models::general::llm::Message;
-use crate::ai_functions::backend_developer::{print_backend_webserver_code, print_improved_webserver_code};
-use crate::helpers::general::{extend_ai_function, check_status_code, read_code_template_contents};
 use crate::apis::call_request::call_gpt;
 use async_trait::async_trait;
 
@@ -16,7 +22,9 @@ use reqwest::Client;
 // Solution Architect
 #[derive(Debug)]
 pub struct AgentBackendDeveloper {
-  attributes: BasicAgent
+  attributes: BasicAgent,
+  bug_errors: Option<String>,
+  bug_count: u8
 }
 
 impl AgentBackendDeveloper {
@@ -24,15 +32,17 @@ impl AgentBackendDeveloper {
 
     // Define attributes
     let attributes: BasicAgent = BasicAgent {
-      objective: "structure the database format for website build".to_string(),
-      position: "Database Architect".to_string(),
+      objective: "Devels backend code for webserver and json database".to_string(),
+      position: "Backend Developer".to_string(),
       state: AgentState::Discovery,
       memory: vec![]
     };
 
     // Return Self
     Self {
-      attributes
+      attributes,
+      bug_errors: None,
+      bug_count: 0
     }
   }
 }
@@ -68,6 +78,7 @@ impl SpecialFunctions for AgentBackendDeveloper {
           // Guard: Ensure required
           if !project_scope.is_crud_required && !project_scope.is_user_login_and_logout {
             self.attributes.state = AgentState::Finished;
+            continue;
           }
 
           // Extract Code Template
@@ -108,6 +119,7 @@ impl SpecialFunctions for AgentBackendDeveloper {
             .expect("Failed to get response from LLM for writing backend code");
 
           // Update tables required
+          save_backend_code(&backend_code);
           factsheet.backend_code = Some(backend_code);
 
           // Change state to working
@@ -118,44 +130,89 @@ impl SpecialFunctions for AgentBackendDeveloper {
         // Check and improve upon code
         AgentState::Working => {
 
-          // Extract database ai function message
-          let msg: String = format!("Junior Developer Code: {:?}, Original Spec: {:?}. 
-            DO NOT WRITE CHAT. THIS FUNCTION ONLY OUTPUTS CODE. JUST OUTPUT THE CODE.", self.backend_code, factsheet);
-          let func_message: Message = extend_ai_function(improve_backend_code, msg.as_str());
+          // Check and Enhance Code
+          if self.bug_count < 2 {
 
-          // Call GPT - Database Schema
-          println!("{} Agent: Senior developer making code adjustments...", {self.attributes.get_position()});
-          let updated_backend_code: String = call_gpt(vec!(func_message)).await
-            .expect("Failed to get response from LLM database JSON schema");
+            // Extract database ai function message
+            let msg: String = format!("CODE_TEMPLATE: {:?}, PROJECT_DESCRIPTION: {:?}. 
+              DO NOT WRITE CHAT. THIS FUNCTION ONLY OUTPUTS CODE. JUST OUTPUT THE CODE.", factsheet.backend_code, factsheet);
+            let func_message: Message = extend_ai_function(print_improved_webserver_code, msg.as_str());
+  
+            // Call GPT - Code Improvements
+            println!("{} Agent: Enhancing code...", {self.attributes.get_position()});
+            let updated_backend_code: String = call_gpt(vec!(func_message)).await
+              .expect("Failed to get response from LLM for code enhancements");
+  
+            // Update and continue
+            save_backend_code(&updated_backend_code);
+            factsheet.backend_code = Some(updated_backend_code);
+            self.attributes.state = AgentState::UnitTesting;
+            continue;
 
-          // Save Rust Code
-          fs::write("/Users/shaun/Code/DEVELOPMENT/autogippity/website/backend/src/main.rs", &updated_backend_code)
-            .expect("Failed to save file in requested location. Check your file path.");
+          // Correct for errors
+          } else {
 
-          // Store code in memory and move to unit testing
-          self.backend_code = Some(updated_backend_code);
-          self.attributes.state = AgentState::UnitTesting;
-          continue;
+            // Extract database ai function message
+            let msg: String = format!("BROKEN_CODE: {:?}, ERROR_BUGS: {:?}. 
+              DO NOT WRITE CHAT. THIS FUNCTION ONLY OUTPUTS CODE. JUST OUTPUT THE CODE.", factsheet.backend_code, self.bug_errors);
+            let func_message: Message = extend_ai_function(print_fixed_code, msg.as_str());
+
+            // Call GPT - Fix bugs
+            println!("{} Agent: Fixing bugs...", {self.attributes.get_position()});
+            let updated_backend_code: String = call_gpt(vec!(func_message)).await
+              .expect("Failed to get response from LLM for bug fixes");
+
+            // Update and continue
+            save_backend_code(&updated_backend_code);
+            factsheet.backend_code = Some(updated_backend_code);
+            self.attributes.state = AgentState::UnitTesting;
+            continue;
+          }
         },
 
-        // Check and improve upon code
+        // Check Code Builds
         AgentState::UnitTesting => {
-
-          // Extract url endpoints from backend code for calling/testing
 
           // Build backend application
           println!("Backend Unit Testing: building...");
-          let mut backend_server: std::process::Child = Command::new("cargo")
+          let mut build_backend_server: std::process::Output = Command::new("cargo")
+            .arg("build")
+            .current_dir(BACKEND_CODE_DIR)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .expect("Failed to run the backend application");
+
+          // Determine if build errors
+          if build_backend_server.status.success() {
+            println!("Test server build successful...");
+          } else {
+            let error_arr: Vec<u8> = build_backend_server.stderr;
+            let error_str: String = String::from_utf8(error_arr).unwrap();
+
+            // Update error stats
+            self.bug_count += 1;
+            self.bug_errors = Some(error_str);
+
+            // Pass back for rework
+            self.attributes.state = AgentState::Working;
+          }
+
+          // Get URLS to test
+
+          // Build backend application
+          println!("Backend Unit Testing: Starting server...");
+          let mut run_backend_server: std::process::Child = Command::new("cargo")
             .arg("run")
-            .current_dir("/Users/shaun/Code/DEVELOPMENT/autogippity/website/backend")
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn() // or .status()
+            .current_dir(BACKEND_CODE_DIR)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
             .expect("Failed to run the backend application");
 
           // Sleep for 5 seconds
-          println!("Calling endpoints...");
-          let seconds_sleep: Duration = Duration::from_secs(10);
+          println!("Launching tests on server in 5 seconds...");
+          let seconds_sleep: Duration = Duration::from_secs(5);
           time::sleep(seconds_sleep).await;
 
           // Create client with timeout
@@ -165,7 +222,8 @@ impl SpecialFunctions for AgentBackendDeveloper {
             .unwrap();
 
           // Check status code
-          match check_status_code(&client, "http://localhost:8080/klines").await {
+          println!("Testing endpoint...")
+          match check_status_code(&client, "http://localhost:8080/forex").await {
             Ok(status_code) => {
               if status_code != 200 {
                 panic!("Failed to call backend url");
@@ -173,13 +231,13 @@ impl SpecialFunctions for AgentBackendDeveloper {
             }
             Err(e) => {
               // kill $(lsof -t -i:8080)
-              backend_server.kill().expect("Failed to kill the backend web server");
+              run_backend_server.kill().expect("Failed to kill the backend web server");
               println!("Error checking backend: {}", e)
             },
           }
 
           // Kill backend server
-          backend_server.kill().expect("Failed to kill the backend web server");
+          run_backend_server.kill().expect("Failed to kill the backend web server");
 
           // Update agent state to finished
           self.attributes.state = AgentState::Finished;
@@ -212,7 +270,7 @@ pub mod tests {
     let mut agent: AgentBackendDeveloper = AgentBackendDeveloper::new();
 
     // Initialze Factsheet
-    let mut factsheet: FactSheet = serde_json::from_str("{\"project_goal\":\"build a website that fetches Binance crypto prices and provides a full-stack solution\",\"initial_spec\":{\"user_login_required\":false,\"website_purpose\":\"fetches Binance crypto prices\",\"preferred_data_storage\":\"JSON\",\"main_colors\":null,\"other_info_database\":null,\"other_info_backend\":\"full-stack solution\",\"other_info_frontend\":null},\"urls\":[{\"rest_api_endpoint\":\"https://api.binance.com/api/v3/exchangeInfo\",\"rest_api_purpose\":\"Returns crypto currency symbols with data relates to that symbol\"},{\"rest_api_endpoint\":\"https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d\",\"rest_api_purpose\":\"Returns crypto currency symbols with data relates to that symbol\"}],\"db_schema\":\"[\\n  \\\"users_table: {\\n    id: int,\\n    name: string,\\n    email: string,\\n    password: string,\\n    hashed_password: string\\n  },\\n  crypto_prices_table: {\\n    product_id: int,\\n    product_name: string,\\n    product_description: string\\n  },\\n  binance_api_table: {\\n    api_key: string,\\n    secret_key: string\\n  },\\n  price_history_table: {\\n    id: int,\\n    date_created: timestamp,\\n    crypto_price: string,\\n    user_id: int\\n  },\\n  refresh_token_table: {\\n    id: int,\\n    refresh_token: string,\\n    user_id: int\\n  }\\n]\",\"cargo_imports\":null,\"yarn_imports\":null,\"backend_rest_api_urls\":null}").unwrap();
+    let mut factsheet: FactSheet = serde_json::from_str("{\"project_description\":\"Build a full stack website with user login and logout that shows latest Forex prices\",\"project_scope\":{\"is_crud_required\":true,\"is_user_login_and_logout\":true,\"is_external_urls_required\":true},\"external_urls\":[\"https://api.exchangeratesapi.io/latest\"],\"backend_code\":null,\"frontend_code\":null,\"json_db_schema\":null}").unwrap();
 
     // Execute running agent
     agent.execute(&mut factsheet).await.expect("Unable to execute running agent");
@@ -222,14 +280,14 @@ pub mod tests {
   }
 
   #[tokio::test]
-  async fn tests_code_written_code() {
+  async fn tests_written_code() {
 
     // Create agent instance and site purpose
     let mut agent: AgentBackendDeveloper = AgentBackendDeveloper::new();
     agent.attributes.state = AgentState::UnitTesting;
 
     // Initialze Factsheet
-    let mut factsheet: FactSheet = serde_json::from_str("{\"project_goal\":\"build a website that fetches Binance crypto prices and provides a full-stack solution\",\"initial_spec\":{\"user_login_required\":false,\"website_purpose\":\"fetches Binance crypto prices\",\"preferred_data_storage\":\"JSON\",\"main_colors\":null,\"other_info_database\":null,\"other_info_backend\":\"full-stack solution\",\"other_info_frontend\":null},\"urls\":[{\"rest_api_endpoint\":\"https://api.binance.com/api/v3/exchangeInfo\",\"rest_api_purpose\":\"Returns crypto currency symbols with data relates to that symbol\"},{\"rest_api_endpoint\":\"https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d\",\"rest_api_purpose\":\"Returns crypto currency symbols with data relates to that symbol\"}],\"db_schema\":\"[\\n  \\\"users_table: {\\n    id: int,\\n    name: string,\\n    email: string,\\n    password: string,\\n    hashed_password: string\\n  },\\n  crypto_prices_table: {\\n    product_id: int,\\n    product_name: string,\\n    product_description: string\\n  },\\n  binance_api_table: {\\n    api_key: string,\\n    secret_key: string\\n  },\\n  price_history_table: {\\n    id: int,\\n    date_created: timestamp,\\n    crypto_price: string,\\n    user_id: int\\n  },\\n  refresh_token_table: {\\n    id: int,\\n    refresh_token: string,\\n    user_id: int\\n  }\\n]\",\"cargo_imports\":null,\"yarn_imports\":null,\"backend_rest_api_urls\":null}").unwrap();
+    let mut factsheet: FactSheet = serde_json::from_str("{\"project_description\":\"Build a full stack website with user login and logout that shows latest Forex prices\",\"project_scope\":{\"is_crud_required\":true,\"is_user_login_and_logout\":true,\"is_external_urls_required\":true},\"external_urls\":[\"https://api.exchangeratesapi.io/latest\"],\"backend_code\":null,\"frontend_code\":null,\"json_db_schema\":null}").unwrap();
 
     // Execute running agent
     agent.execute(&mut factsheet).await.expect("Unable to execute running agent");
