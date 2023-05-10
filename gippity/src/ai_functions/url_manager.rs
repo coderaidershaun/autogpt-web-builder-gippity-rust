@@ -1,49 +1,17 @@
-use serde::Deserialize;
 use proc_macro::function_to_string;
 
 
 // Converts a request into a Factsheet
 #[function_to_string]
-pub fn provide_site_urls(_website_purpose: &str) {
-  /// Input: Takes in a specification for a website
-  /// Function: Outputs a list of backend REST API endpoints that should be used in the building of the website
-  /// Important: Only selects url endpoints which do not require any API Keys
-  /// Output: Prints a JSON response in the following format:
-  /// [
-  ///   {
-  ///     "rest_api_endpoint": String,
-  ///     "rest_api_purpose": String,
-  ///   },
-  ///   ...
-  /// ]
+pub fn print_site_urls(_project_description: &str) {
+  /// Input: Takes in a project description of a website build
+  /// Function: Outputs a list of external public API endpoints that should be used in the building of the website
+  /// Important: Only selects url endpoint(s) which do not require any API Keys at all
+  /// Output: Prints a list response of external urls in the following format:
+  /// ["url1", "url2", "url3", ...]
   /// Example:
   ///   website_team_spec = "website_purpose: Some("\"Provides Crypto Price Data from Binance and Kraken\"",)"
-  ///   returns [
-  ///   {
-  ///     "rest_api_endpoint": https://api.binance.com/api/v3/exchangeInfo,
-  ///     "rest_api_purpose": "Returns crypto currency symbols with data relates to that symbol",
-  ///   },
-  ///   {
-  ///     "rest_api_endpoint": https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d,
-  ///     "rest_api_purpose": "Returns crypto currency symbols with data relates to that symbol",
-  ///   },
-  ///   ...
-  /// ]
-  println!(OUTPUT)
-}
-
-
-
-// Converts a request into a Factsheet
-#[function_to_string]
-pub fn is_site_urls_required(_website_purpose: &str) {
-  /// Input: Takes in a specification for a website
-  /// Function: Outputs a boolean true or false as to whether the website will need to get data from third party data sources
-  /// Important: Only selects url endpoints which do not require any API Keys
-  /// Output: Prints a string response in the following format: false
-  /// VERY IMPORTANT: There should ONLY be a boolean response. Nothing else.
-  /// Example:
-  ///   website_purpose = "website_purpose: Some("\"Provides Crypto Price Data from Binance and Kraken\"",)
-  ///   returns true
+  ///   prints:
+  /// ["https://api.binance.com/api/v3/exchangeInfo", "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d"]
   println!(OUTPUT)
 }

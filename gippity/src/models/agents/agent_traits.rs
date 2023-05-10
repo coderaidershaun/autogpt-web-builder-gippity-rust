@@ -13,41 +13,22 @@ pub struct UrlItem {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct InitialSpec {
-  pub user_login_required: bool,
-  pub website_purpose: Option<String>,
-  pub preferred_data_storage: Option<String>,
-  pub main_colors: Option<Vec<String>>,
-  pub other_info_database: Option<String>,
-  pub other_info_backend: Option<String>,
-  pub other_info_frontend: Option<String>
-}
-
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct CargoImports {
-  pub cargo_package_name: String,
-  pub cargo_package_features: Option<Vec<String>>
-}
-
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct YarnImports {
-  pub yarn_package_name: String,
-  pub yarn_package_version: Option<Vec<String>>
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ProjectScope {
+  pub is_crud_required: bool,
+  pub is_user_login_and_logout: bool,
+  pub is_external_urls_required: bool,
 }
 
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FactSheet {
-  pub project_goal: String,
-  pub initial_spec: Option<InitialSpec>,
-  pub urls: Option<Vec<UrlItem>>,
-  pub db_schema: Option<String>,
-  pub cargo_imports: Option<Vec<CargoImports>>,
-  pub yarn_imports: Option<Vec<YarnImports>>,
-  pub backend_rest_api_urls: Option<Vec<String>>
+  pub project_description: String,
+  pub project_scope: Option<ProjectScope>,
+  pub external_urls: Option<Vec<String>>,
+  pub backend_code: Option<String>,
+  pub frontend_code: Option<String>,
+  pub json_db_schema: Option<String>
 }
 
 
