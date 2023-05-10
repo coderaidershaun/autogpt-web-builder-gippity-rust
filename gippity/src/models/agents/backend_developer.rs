@@ -2,8 +2,8 @@ use crate::models::agent_basic::basic_agent::{BasicAgent, AgentState};
 use crate::models::agent_basic::basic_traits::BasicTraits;
 use crate::models::agents::agent_traits::{SpecialFunctions, FactSheet};
 use crate::models::general::llm::Message;
-use crate::ai_functions::backend_developer::{develop_backend_website, improve_backend_code};
-use crate::helpers::general::{extend_ai_function, check_status_code};
+use crate::ai_functions::backend_developer::{print_backend_webserver_code, print_improved_webserver_code};
+use crate::helpers::general::{extend_ai_function, check_status_code, read_code_template_contents};
 use crate::apis::call_request::call_gpt;
 use async_trait::async_trait;
 
@@ -16,8 +16,7 @@ use reqwest::Client;
 // Solution Architect
 #[derive(Debug)]
 pub struct AgentBackendDeveloper {
-  attributes: BasicAgent,
-  backend_code: Option<String>,
+  attributes: BasicAgent
 }
 
 impl AgentBackendDeveloper {
@@ -33,8 +32,7 @@ impl AgentBackendDeveloper {
 
     // Return Self
     Self {
-      attributes,
-      backend_code: None,
+      attributes
     }
   }
 }
@@ -49,16 +47,12 @@ impl SpecialFunctions for AgentBackendDeveloper {
 
   async fn execute(&mut self, factsheet: &mut FactSheet) -> Result<(), Box<dyn std::error::Error>> {
 
-    // Extract initial spec
-    let initial_spec: &Option<String> = match &factsheet.initial_spec {
-      Some(initial_spec) => &initial_spec.website_purpose,
-      None => panic!("No initial spec found")
-    };
-
-    // Extract site purpose
-    let site_purpose: &String = match initial_spec {
-      Some(site_purp) => site_purp,
-      None => &factsheet.project_goal
+    // Extract Project Scope
+    let (project_scope, project_description) = match &factsheet.project_scope {
+      Some(project_scope) => {
+        (project_scope, &factsheet.project_description)
+      },
+      None => panic!("Project Scope required before calling Agent")
     };
 
     // Continue until finished
@@ -71,11 +65,42 @@ impl SpecialFunctions for AgentBackendDeveloper {
         // Write initial backend code
         AgentState::Discovery => {
 
-          // Guard: Ensure DB is required
-          let input_str: String = format!("{:?}", factsheet);
+          // Guard: Ensure required
+          if !project_scope.is_crud_required && !project_scope.is_user_login_and_logout {
+            self.attributes.state = AgentState::Finished;
+          }
+
+          // Extract Code Template
+          let code_template_str: String = read_code_template_contents();
+
+          // Concatenate instruction
+          let mut instruction: String = format!(
+            "CODE_TEMPLATE: {} \n PROJECT_DESCRIPTION: {} \n",
+            code_template_str, project_description);
+
+          // Adjust Instruction - Ignore creating external links
+          if project_scope.is_external_urls_required {
+            instruction = format!("{} IMPORTANT IGNORE EXTERNAL DATA: Even though the PROJECT_DESCRIPTION will connect with external vendors for data,
+            you do not need to write any code linking to external data APIS. This webserver purely deals with CRUD operations.", 
+            instruction);
+          }
+
+          // Adjust Instruction - Ignore creating external links
+          if !project_scope.is_user_login_and_logout {
+            instruction = format!("{} IMPORTANT IGNORE USER REGISTRATION AND LOGIN: Even though the CODE_TEMPLATE shows how to manage User credentials,
+            you can REMOVE this functionality from your code and just use the basic CRUD operations as shown.", 
+            instruction);
+          }
+
+          // Adjust Instruction - Ignore creating external links
+          if !project_scope.is_crud_required {
+            instruction = format!("{} IMPORTANT IGNORE USER REGISTRATION AND LOGIN: Even though the CODE_TEMPLATE shows how to use CRUD,
+            you can REMOVE this functionality from your code and just use the basic User Registration and Login CRUD operations as shown.", 
+            instruction);
+          }
 
           // Extract list tables required
-          let func_message: Message = extend_ai_function(develop_backend_website, input_str.clone().as_str());
+          let func_message: Message = extend_ai_function(print_backend_webserver_code, instruction.as_str());
 
           // Call GPT - Confirm tables required
           println!("{} Agent: Writing first draft of backend code...", {self.attributes.get_position()});
@@ -83,7 +108,7 @@ impl SpecialFunctions for AgentBackendDeveloper {
             .expect("Failed to get response from LLM for writing backend code");
 
           // Update tables required
-          self.backend_code = Some(backend_code);
+          factsheet.backend_code = Some(backend_code);
 
           // Change state to working
           self.attributes.state = AgentState::Working;

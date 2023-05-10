@@ -50,7 +50,7 @@ impl SpecialFunctions for AgentUrlManager {
       Some(project_scope) => {
         (project_scope.is_external_urls_required, &factsheet.project_description)
       },
-      None => panic!("Project Scope required before calling URL Manager Agent")
+      None => panic!("Project Scope required before calling Agent")
     };
 
     // Continue until finished

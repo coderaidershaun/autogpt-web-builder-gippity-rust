@@ -35,7 +35,7 @@ pub struct FactSheet {
 // Trait functionality
 // This will be applied to each agent uniquely
 #[async_trait]
-pub trait SpecialFunctions: Debug + Any { // 'Any' so that we can downcast the Structs in the managing agent
+pub trait SpecialFunctions: Debug {
     
     // Used so that manager can get attributes info from Agents
     fn get_attributes_from_agent(&self) -> &BasicAgent;

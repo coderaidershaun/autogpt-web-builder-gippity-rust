@@ -1,6 +1,8 @@
 use crate::models::general::llm::Message;
 use reqwest::Client;
 
+use std::fs;
+
 
 /// Takes in both the string version of an AI function
 /// Combines this with the user input to encourage a structured printout in a program-like response
@@ -28,3 +30,17 @@ pub async fn check_status_code(client: &Client, url: &str) -> Result<u16, reqwes
   let response: reqwest::Response = client.get(url).send().await?;
   Ok(response.status().as_u16())
 }
+
+
+// Get code template
+pub fn read_code_template_contents() -> String {
+  let path: &str = "/Users/shaun/Code/DEVELOPMENT/autogippity/website/backend/src/codetemplate.rs";
+  fs::read_to_string(path).expect("Something went wrong reading the file")
+}
+
+// Save backend code
+pub fn save_backend_code() -> String {
+  let path: &str = "/Users/shaun/Code/DEVELOPMENT/autogippity/website/backend/src/main.rs";
+  fs::read_to_string(path).expect("Something went wrong reading the file")
+}
+
