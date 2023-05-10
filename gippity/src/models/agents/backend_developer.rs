@@ -1,3 +1,9 @@
+use crate::ai_functions::backend_developer::{
+  print_backend_webserver_code, 
+  print_improved_webserver_code, 
+  print_fixed_code,
+  print_rest_api_endpoints
+};
 use crate::helpers::general::{
   extend_ai_function, 
   check_status_code, 
@@ -5,10 +11,10 @@ use crate::helpers::general::{
   save_backend_code, 
   BACKEND_CODE_DIR
 };
-use crate::ai_functions::backend_developer::{print_backend_webserver_code, print_improved_webserver_code, print_fixed_code};
+use crate::helpers::command_line::confirm_safe_code;
 use crate::models::agent_basic::basic_agent::{BasicAgent, AgentState};
 use crate::models::agent_basic::basic_traits::BasicTraits;
-use crate::models::agents::agent_traits::{SpecialFunctions, FactSheet};
+use crate::models::agents::agent_traits::{SpecialFunctions, FactSheet, RouteObject};
 use crate::models::general::llm::Message;
 use crate::apis::call_request::call_gpt;
 use async_trait::async_trait;
@@ -135,7 +141,7 @@ impl SpecialFunctions for AgentBackendDeveloper {
 
             // Extract database ai function message
             let msg: String = format!("CODE_TEMPLATE: {:?}, PROJECT_DESCRIPTION: {:?}. 
-              DO NOT WRITE CHAT. THIS FUNCTION ONLY OUTPUTS CODE. JUST OUTPUT THE CODE.", factsheet.backend_code, factsheet);
+              THIS FUNCTION ONLY OUTPUTS CODE. JUST OUTPUT THE CODE.", factsheet.backend_code, factsheet);
             let func_message: Message = extend_ai_function(print_improved_webserver_code, msg.as_str());
   
             // Call GPT - Code Improvements
@@ -154,7 +160,7 @@ impl SpecialFunctions for AgentBackendDeveloper {
 
             // Extract database ai function message
             let msg: String = format!("BROKEN_CODE: {:?}, ERROR_BUGS: {:?}. 
-              DO NOT WRITE CHAT. THIS FUNCTION ONLY OUTPUTS CODE. JUST OUTPUT THE CODE.", factsheet.backend_code, self.bug_errors);
+              THIS FUNCTION ONLY OUTPUTS CODE. JUST OUTPUT THE CODE.", factsheet.backend_code, self.bug_errors);
             let func_message: Message = extend_ai_function(print_fixed_code, msg.as_str());
 
             // Call GPT - Fix bugs
@@ -172,6 +178,13 @@ impl SpecialFunctions for AgentBackendDeveloper {
 
         // Check Code Builds
         AgentState::UnitTesting => {
+
+          // Guard: Ensure safe code
+          println!("Backend Unit Testing: ensure safe code...");
+          let is_safe_code: bool = confirm_safe_code();
+          if !is_safe_code {
+            panic!("Better go work on some AI alignment instead...")
+          }
 
           // Build backend application
           println!("Backend Unit Testing: building...");
@@ -198,7 +211,31 @@ impl SpecialFunctions for AgentBackendDeveloper {
             self.attributes.state = AgentState::Working;
           }
 
-          // Get URLS to test
+          // Get latest backend code from file (so can run separately when running cargo test)
+          let path: String = format!("{}/src/main.rs", BACKEND_CODE_DIR);
+          let backend_code: String = fs::read_to_string(path).expect("Something went wrong reading the file");
+
+          // Construct func_message for URL extraction
+          let msg: String = format!("CODE_INPUT: {:?}", backend_code);
+          let func_message: Message = extend_ai_function(print_rest_api_endpoints, msg.as_str());
+
+          // Call GPT - Get API Endpoint JSON Schema
+          println!("{} Agent: Extracting REST API Endpoint Urls...", {self.attributes.get_position()});
+          let api_endpoints_str: String = call_gpt(vec!(func_message)).await
+            .expect("Failed to get response from LLM for extracting endpoints");
+
+          // Convert API Endpoints into Values
+          let api_endpoints: Vec<RouteObject> = serde_json::from_str(api_endpoints_str.as_str())
+            .expect("Failed to decode API Endpoints");
+
+          // Extract API Endpoints
+          let check_endpoints: Vec<RouteObject> = api_endpoints.iter()
+            .filter(|&route_object| route_object.method == "get" && route_object.is_route_dynamic == "false")
+            .cloned()
+            .collect();
+
+          // Store API Endpoints
+          factsheet.api_endpoint_schema = Some(check_endpoints.clone());
 
           // Build backend application
           println!("Backend Unit Testing: Starting server...");
@@ -222,21 +259,25 @@ impl SpecialFunctions for AgentBackendDeveloper {
             .unwrap();
 
           // Check status code
-          println!("Testing endpoint...")
-          match check_status_code(&client, "http://localhost:8080/forex").await {
-            Ok(status_code) => {
-              if status_code != 200 {
-                panic!("Failed to call backend url");
+          for endpoint in check_endpoints {
+            println!("Testing endpoint '{}'...", endpoint.route);
+            let url: String = format!("http://localhost:8080{}", endpoint.route);
+            match check_status_code(&client, &url).await {
+              Ok(status_code) => {
+                if status_code != 200 {
+                  eprintln!("WARNING: Failed to call backend url endpoint {}", endpoint.route);
+                }
               }
+              Err(e) => {
+                // kill $(lsof -t -i:8080)
+                run_backend_server.kill().expect("Failed to kill the backend web server");
+                println!("Error checking backend: {}", e)
+              },
             }
-            Err(e) => {
-              // kill $(lsof -t -i:8080)
-              run_backend_server.kill().expect("Failed to kill the backend web server");
-              println!("Error checking backend: {}", e)
-            },
           }
 
           // Kill backend server
+          println!("Backend testing complete - stopping backend server...");
           run_backend_server.kill().expect("Failed to kill the backend web server");
 
           // Update agent state to finished

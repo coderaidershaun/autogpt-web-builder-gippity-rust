@@ -6,10 +6,13 @@ use std::fmt::Debug;
 use std::any::Any;
 
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct UrlItem {
-  pub rest_api_endpoint: String,
-  pub rest_api_purpose: String,
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct RouteObject {
+  pub is_route_dynamic: String,
+  pub method: String,
+  pub request_body: serde_json::Value,
+  pub response: serde_json::Value,
+  pub route: String,
 }
 
 
@@ -28,7 +31,7 @@ pub struct FactSheet {
   pub external_urls: Option<Vec<String>>,
   pub backend_code: Option<String>,
   pub frontend_code: Option<String>,
-  pub json_db_schema: Option<String>
+  pub api_endpoint_schema: Option<Vec<RouteObject>>
 }
 
 

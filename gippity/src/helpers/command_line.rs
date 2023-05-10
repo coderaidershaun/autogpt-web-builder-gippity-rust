@@ -33,9 +33,8 @@ pub fn get_user_response(question: &str) -> String {
 
 
 // Get user request
-pub fn request_database_preference() -> Option<String> {
+pub fn confirm_safe_code() -> bool {
   let mut stdout: std::io::Stdout = stdout();
-
   loop {
 
     // Print the question in a specific color
@@ -43,7 +42,8 @@ pub fn request_database_preference() -> Option<String> {
         .execute(SetForegroundColor(Color::Blue))
         .unwrap();
     println!("");
-    println!("Do you have a preferred database solution?");
+    print!("You are about to run code written entirely by AI. ");
+    println!("Review the code and confirm your view:");
 
     // Reset color
     stdout
@@ -52,13 +52,13 @@ pub fn request_database_preference() -> Option<String> {
 
     // Present options with different colors
     stdout
-        .execute(SetForegroundColor(Color::DarkMagenta))
+        .execute(SetForegroundColor(Color::Green))
         .unwrap();
-    println!("[1] JSON ");
+    println!("[1] All good, the paper clips are not a threat ");
     stdout
-        .execute(SetForegroundColor(Color::Cyan))
+        .execute(SetForegroundColor(Color::DarkRed))
         .unwrap();
-    println!("[2] No ");
+    println!("[2] Uh oh, it looks like AI is going to take over ");
 
     // Reset color
     stdout
@@ -76,12 +76,8 @@ pub fn request_database_preference() -> Option<String> {
 
     // Match response
     match human_response.as_str() {
-      "1" | "json" | "1\n" => {
-        return Some("JSON".to_string());
-      }
-      "2" | "no" | "2\n" => {
-        return None;
-      }
+      "1" | "yes" => return true,
+      "2" | "no" => return false,
       _ => {
           println!("Invalid input. Please enter '1' or '2'.");
       }

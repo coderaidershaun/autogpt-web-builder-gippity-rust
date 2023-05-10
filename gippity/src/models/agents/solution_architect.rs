@@ -96,7 +96,7 @@ pub mod tests {
       external_urls: None,
       backend_code: None,
       frontend_code: None,
-      json_db_schema: None
+      api_endpoint_schema: None
     };
 
     // Execute running agent
