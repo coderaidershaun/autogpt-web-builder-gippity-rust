@@ -8,7 +8,8 @@ use crate::helpers::general::{
   extend_ai_function, 
   check_status_code, 
   read_code_template_contents, 
-  save_backend_code, 
+  save_backend_code,
+  save_api_endpoints,
   BACKEND_CODE_DIR
 };
 use crate::helpers::command_line::confirm_safe_code;
@@ -275,6 +276,9 @@ impl SpecialFunctions for AgentBackendDeveloper {
               },
             }
           }
+
+          // Save API Endpoints
+          save_api_endpoints(&api_endpoints_str);
 
           // Kill backend server
           println!("Backend testing complete - stopping backend server...");

@@ -32,7 +32,7 @@ pub fn get_user_response(question: &str) -> String {
 }
 
 
-// Get user request
+// User response on safe code
 pub fn confirm_safe_code() -> bool {
   let mut stdout: std::io::Stdout = stdout();
   loop {
@@ -54,11 +54,11 @@ pub fn confirm_safe_code() -> bool {
     stdout
         .execute(SetForegroundColor(Color::Green))
         .unwrap();
-    println!("[1] All good, the paper clips are not a threat ");
+    println!("[1] All good, nothing alarming going on here ");
     stdout
         .execute(SetForegroundColor(Color::DarkRed))
         .unwrap();
-    println!("[2] Uh oh, it looks like AI is going to take over ");
+    println!("[2] Uh oh, better stop this project ");
 
     // Reset color
     stdout
@@ -72,12 +72,12 @@ pub fn confirm_safe_code() -> bool {
         .expect("Failed to read response");
 
     // Trim whitespace and convert to lowercase for case-insensitive comparison
-    let human_response = human_response.trim().to_lowercase();
+    let human_response: String = human_response.trim().to_lowercase();
 
     // Match response
     match human_response.as_str() {
-      "1" | "yes" => return true,
-      "2" | "no" => return false,
+      "1" | "ok" | "y" => return true,
+      "2" | "no" | "n" => return false,
       _ => {
           println!("Invalid input. Please enter '1' or '2'.");
       }
