@@ -1,12 +1,9 @@
-[{
+[
+  {
     "route": "/task",
     "is_route_dynamic": "false",
     "method": "post",
-    "request_body": {
-      "id": "number",
-      "name": "string",
-      "completed": "bool"
-    },
+    "request_body": { "id": "number", "name": "string", "completed": "bool" },
     "response": "None"
   },
   {
@@ -14,32 +11,20 @@
     "is_route_dynamic": "false",
     "method": "get",
     "request_body": "None",
-    "response": [{
-      "id": "number",
-      "name": "string",
-      "completed": "bool"
-    }]
+    "response": [{ "id": "number", "name": "string", "completed": "bool" }]
   },
   {
     "route": "/task/{id}",
     "is_route_dynamic": "true",
     "method": "get",
     "request_body": "None",
-    "response": {
-      "id": "number",
-      "name": "string",
-      "completed": "bool"
-    }
+    "response": { "id": "number", "name": "string", "completed": "bool" }
   },
   {
     "route": "/task/{id}",
     "is_route_dynamic": "true",
     "method": "put",
-    "request_body": {
-      "id": "number",
-      "name": "string",
-      "completed": "bool"
-    },
+    "request_body": { "id": "number", "name": "string", "completed": "bool" },
     "response": "None"
   },
   {
@@ -64,17 +49,14 @@
     "route": "/login",
     "is_route_dynamic": "false",
     "method": "post",
-    "request_body": {
-      "id": "number",
-      "username": "string",
-      "password": "string"
-    },
-    "response": "None"
+    "request_body": { "username": "string", "password": "string" },
+    "response": "string"
   },
   {
-    "route": "/forex",
+    "route": "/binance_prices",
     "is_route_dynamic": "false",
     "method": "get",
     "request_body": "None",
-    "response": "not_provided"
-}]
+    "response": "string"
+  }
+]

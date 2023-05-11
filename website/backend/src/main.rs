@@ -4,8 +4,7 @@ use std::sync::Mutex;
 use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
-use reqwest;
-use tokio;
+use reqwest::Client;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Task {
@@ -84,12 +83,6 @@ struct AppState {
     db: Mutex<Database>,
 }
 
-async fn get_forex() -> Result<String, reqwest::Error> {
-    let response = reqwest::get("https://api.exchangeratesapi.io/latest").await?;
-    let result = response.text().await?;
-    Ok(result)
-}
-
 async fn create_task(app_state: web::Data<AppState>, task: web::Json<Task>) -> impl Responder {
     let mut db = app_state.db.lock().unwrap();
     db.insert(task.into_inner());
@@ -143,11 +136,6 @@ async fn login(app_state: web::Data<AppState>, user: web::Json<User>) -> impl Re
     }
 }
 
-async fn forex(app_state: web::Data<AppState>) -> impl Responder {
-    let result = get_forex().await;
-    HttpResponse::Ok().json(result.unwrap())
-}
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let db = match Database::load_from_file() {
@@ -169,7 +157,6 @@ async fn main() -> std::io::Result<()> {
             .route("/task/{id}", web::delete().to(delete_task))
             .route("/register", web::post().to(register))
             .route("/login", web::post().to(login))
-            .route("/forex", web::get().to(forex))
     })
     .bind("127.0.0.1:8080")?
     .run()

@@ -1,7 +1,6 @@
 use proc_macro::function_to_string;
 
 
-// Converts a request into a Factsheet
 #[function_to_string]
 pub fn print_site_urls(_project_description: &str) {
   /// Input: Takes in a project description of a website build
