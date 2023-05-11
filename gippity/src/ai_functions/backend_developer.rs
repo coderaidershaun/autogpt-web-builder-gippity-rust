@@ -6,7 +6,7 @@ pub fn print_backend_webserver_code(_project_description_and_template: &str) {
   /// INPUT: Takes in a PROJECT_DESCRIPTION and CODE_TEMPLATE for a website backend build
   /// FUNCTION: Takes an existing set of code marked as CODE_TEMPLATE and updates or re-writes it to work for the purpose in the PROJECT_DESCRIPTION
   /// IMPORTANT: The following libraries are already installed
-  ///   reqwest, serde, serde_json, tokio, actix-web, async-trait
+  ///   reqwest, serde, serde_json, tokio, actix-web, async-trait, actix_cors
   /// Therefore, this function can only work with code from the standard Rust library or the above as per shown in the CODE_TEMPLATE
   /// OUTPUT: Print ONLY the code, nothing else. This function ONLY prints code.
   println!(OUTPUT)

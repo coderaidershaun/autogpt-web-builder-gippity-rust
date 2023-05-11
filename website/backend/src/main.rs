@@ -1,4 +1,5 @@
-use actix_web::{web, App, HttpServer, Responder, HttpResponse};
+use actix_cors::Cors;
+use actix_web::{http::header, web, App, HttpServer, Responder, HttpResponse};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use std::collections::HashMap;
@@ -149,6 +150,17 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(
+                Cors::permissive()
+                    .allowed_origin_fn(|origin, _req_head| {
+                        origin.as_bytes().starts_with(b"http://localhost:") || origin == "null"
+                    })
+                    .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
+                    .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
+                    .allowed_header(header::CONTENT_TYPE)
+                    .supports_credentials()
+                    .max_age(3600),
+            )
             .app_data(data.clone())
             .route("/task", web::post().to(create_task))
             .route("/task", web::get().to(read_all_tasks))
