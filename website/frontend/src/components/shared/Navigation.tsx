@@ -1,44 +1,72 @@
+import React, { useState } from "react";
 import Logo from "./Logo";
 
 type Props = {
   currentPage: string;
-  setCurrentPage: (page: string) => void;
+  setCurrentPage: any; // Leave this as any as an unknown setter function will be passed here
 };
 
 function Navigation({ setCurrentPage, currentPage }: Props) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleClick = (page: string) => {
+    setCurrentPage(page);
+    setIsMobileMenuOpen(false);
+  };
+
   return (
-    <div className="container mx-auto flex items-center justify-between py-2">
-      <Logo />
-      <div className="hidden sm:block">
-        <ul className="flex items-center space-x-4">
-          <li>
-            <button
-              className={`text-sm font-medium ${
+    <div className="bg-white">
+      <nav className="container mx-auto py-4 px-6">
+        <div className="md:flex justify-between">
+          <div className="flex justify-between">
+            <div className="flex">
+              <Logo />
+            </div>
+            <div className="md:hidden">
+              <button
+                className="text-gray-700 focus:outline-none"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  width="28"
+                  height="28"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4 8h12a1 1 0 000-2H4a1 1 0 100 2zm0 4h12a1 1 0 000-2H4a1 1 0 100 2zm0 4h12a1 1 0 000-2H4a1 1 0 100 2z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div
+            className={`${
+              isMobileMenuOpen ? "block" : "hidden"
+            } md:flex md:flex-row md:items-center md:space-x-8`}
+          >
+            <a
+              className={`${
                 currentPage === "home_page" ? "text-blue-500" : "text-gray-500"
-              }`}
-              onClick={() => setCurrentPage("home_page")}
+              } cursor-pointer py-2 px-4 text-lg md:hover:text-blue-500 md:focus:text-blue-500 md:focus:outline-none`}
+              onClick={() => handleClick("home_page")}
             >
               Home
-            </button>
-          </li>
-          <li>
-            <button
-              className={`text-sm font-medium ${
+            </a>
+            <a
+              className={`${
                 currentPage === "about_page" ? "text-blue-500" : "text-gray-500"
-              }`}
-              onClick={() => setCurrentPage("about_page")}
+              } cursor-pointer py-2 px-4 text-lg md:hover:text-blue-500 md:focus:text-blue-500 md:focus:outline-none`}
+              onClick={() => handleClick("about_page")}
             >
               About
-            </button>
-          </li>
-        </ul>
-      </div>
-      <div className="sm:hidden">
-        <button className="text-sm font-medium text-gray-500">
-          {/* Replace this with your burger menu and slider */}
-          Menu
-        </button>
-      </div>
+            </a>
+          </div>
+        </div>
+      </nav>
     </div>
   );
 }

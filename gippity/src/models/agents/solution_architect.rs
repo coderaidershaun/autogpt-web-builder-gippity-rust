@@ -3,7 +3,7 @@ use crate::models::agent_basic::basic_traits::BasicTraits;
 use crate::models::agents::agent_traits::{SpecialFunctions, FactSheet, ProjectScope};
 use crate::models::general::llm::Message;
 use crate::ai_functions::solution_architect::print_project_scope;
-use crate::helpers::general::extend_ai_function;
+use crate::helpers::general::{ai_task_request_decoded, AIFuncResponse};
 use crate::apis::call_request::call_gpt;
 use async_trait::async_trait;
 
@@ -48,21 +48,15 @@ impl SpecialFunctions for AgentSolutionArchitect {
       // Handle discovery process
       AgentState::Discovery => {
 
-        // Extract message
+        // Define agent message
         let msg_context: String = format!("{:?}", factsheet.project_description);
-        let func_message: Message = extend_ai_function(print_project_scope, &msg_context);
-
-        // Call GPT - Construct factsheet
-        println!("{} Agent: Scoping project...", {self.attributes.get_position()});
-        let project_scope_ser: String = call_gpt(vec!(func_message)).await.expect("Failed to get response from LLM on factsheet");
-
-        // Construct factsheet
-        let project_scope: ProjectScope = serde_json::from_str(project_scope_ser.as_str()).expect("Failed to decode LLM response message");
         
-        // Append factsheet
-        factsheet.project_scope = Some(project_scope);
+        // Get AI Response
+        let ai_response: ProjectScope = ai_task_request_decoded::<ProjectScope>(
+          msg_context, &self.attributes.position, get_function_string!(print_project_scope), print_project_scope).await;
 
-        // Update agent state to finished
+        // Store results
+        factsheet.project_scope = Some(ai_response);
         self.attributes.update_state(AgentState::Finished);
       },
       _ => {}

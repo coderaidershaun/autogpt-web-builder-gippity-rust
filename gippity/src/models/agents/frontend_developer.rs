@@ -268,8 +268,8 @@ impl AgentFrontendDeveloper {
   }
 
 
-  // Build navigation component
-  async fn create_navigation_component(&mut self, project_description: &String, file_path: &String) {
+  // Build navigation header component
+  async fn create_navigation_header_component(&mut self, project_description: &String, file_path: &String) {
 
     // Structure message
     let pages: &Vec<String> = self.buildsheet.pages.as_ref().expect("Missing pages");
@@ -284,6 +284,30 @@ impl AgentFrontendDeveloper {
 
     // Call GPT - Build SVG Logo
     println!("{} Agent: Building Navigation component...", {self.attributes.get_position()});
+    let navigation_component: String = call_gpt(vec!(func_message)).await
+      .expect("Failed to get response from LLM");
+
+    // Save Component
+    save_frontend_code(file_path, &navigation_component);
+  }
+
+
+  // Build navigation footer component
+  async fn create_navigation_footer_component(&mut self, project_description: &String, file_path: &String) {
+
+    // Structure message
+    let pages: &Vec<String> = self.buildsheet.pages.as_ref().expect("Missing pages");
+    let msg_context: String = format!("WEBSITE_SPECIFICATION: {{
+      PROJECT_DESCRIPTION: {},
+      PAGES_WHICH_NEED_LINKS: {:?},
+      COLOUR_SCHEME: {:?}
+    }}", 
+      project_description, pages, self.buildsheet.brand_colours);
+    let func_message: Message = extend_ai_function(
+      print_footer_navigation_react_component, &msg_context);
+
+    // Call GPT - Build SVG Logo
+    println!("{} Agent: Building Footer component...", {self.attributes.get_position()});
     let navigation_component: String = call_gpt(vec!(func_message)).await
       .expect("Failed to get response from LLM");
 
@@ -423,7 +447,7 @@ impl SpecialFunctions for AgentFrontendDeveloper {
               // Create component
               let file_path: String = "/src/components/shared/Navigation.tsx".to_string();
               if self.bug_count == 0 {
-                self.create_navigation_component(&project_description, &file_path).await;
+                self.create_navigation_header_component(&project_description, &file_path).await;
               } else {
                 self.run_code_correction(file_path).await;
               }
@@ -431,7 +455,7 @@ impl SpecialFunctions for AgentFrontendDeveloper {
               // Test Component
               match self.perform_component_test().await {
                 Ok(_) => {
-                  self.operation_focus = "navigation_header".to_string();
+                  self.operation_focus = "navigation_footer".to_string();
                 },
                 Err(_) => {
                   continue; // Loop back and perform code correction
@@ -439,12 +463,29 @@ impl SpecialFunctions for AgentFrontendDeveloper {
               }
             }
 
+            // Create navigation header
+            if self.operation_focus == "navigation_footer" {
+
+              // Create component
+              let file_path: String = "/src/components/shared/Footer.tsx".to_string();
+              if self.bug_count == 0 {
+                self.create_navigation_footer_component(&project_description, &file_path).await;
+              } else {
+                self.run_code_correction(file_path).await;
+              }
+
+              // Test Component
+              match self.perform_component_test().await {
+                Ok(_) => {
+                  self.operation_focus = "pages".to_string();
+                },
+                Err(_) => {
+                  continue; // Loop back and perform code correction
+                }
+              }
+            }
             
-
           }
-
-
-
 
           // Complete
           self.attributes.state = AgentState::Finished;

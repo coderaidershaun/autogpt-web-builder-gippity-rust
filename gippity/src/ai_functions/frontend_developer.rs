@@ -182,7 +182,7 @@ pub fn print_header_navigation_react_component(_website_specification: &str) {
   /// import Logo from "./Logo"
   /// type Props = {
   ///   currentPage: string;
-  ///   setCurrentPage: Any;
+  ///   setCurrentPage: any; // Leave this as any as an unknown setter function will be passed here
   /// }
   /// function Navigation({setCurrentPage, currentPage}: Props) {
   ///   return (
@@ -206,8 +206,14 @@ pub fn print_footer_navigation_react_component(_website_specification: &str) {
   /// OUTPOUT: The navigation footer bar includes the following
   ///   1 - Page links based on the pages provided in the specification
   ///   2 - Must be responsive and be a small fixed bar to the bottom of the screen if in mobile view
+  ///   3 - Takes in a getter and setter prop called currentPage and setCurrentPage respectively
+  ///   4 - Depending on the page, a different color will show on the navigation links
   /// TEMPLATE:
-  /// function Footer() {
+  /// type Props = {
+  ///   currentPage: string;
+  ///   setCurrentPage: any; // Leave this as any as an unknown setter function will be passed here
+  /// }
+  /// function Footer({setCurrentPage, currentPage}: Props) {
   ///   return (
   ///     <div>
   ///       YOUR COMPONENT CODE GOES HERE

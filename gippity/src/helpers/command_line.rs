@@ -5,6 +5,33 @@ use crossterm::{
 use std::io::{stdin, stdout};
 
 
+// Print agent response
+pub fn print_agent_message(agent_pos: &str, agent_statement: &str) {
+  let mut stdout: std::io::Stdout = stdout();
+
+  // Print the agent statement in a specific color
+  stdout
+    .execute(SetForegroundColor(Color::Green))
+    .unwrap();
+
+  // Print agent in colour
+  print!("Agent: {}: ", agent_pos);
+
+  // Reset color
+  stdout
+    .execute(SetForegroundColor(Color::Cyan))
+    .unwrap();
+
+  // Print message
+  println!("{}", agent_statement);
+
+  // Reset color
+  stdout
+      .execute(ResetColor)
+      .unwrap();
+}
+
+
 // Get user request
 pub fn get_user_response(question: &str) -> String {
   let mut stdout: std::io::Stdout = stdout();
