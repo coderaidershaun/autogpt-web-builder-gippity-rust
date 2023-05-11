@@ -39,7 +39,7 @@ impl AgentBackendDeveloper {
 
     // Define attributes
     let attributes: BasicAgent = BasicAgent {
-      objective: "Devels backend code for webserver and json database".to_string(),
+      objective: "Develops backend code for webserver and json database".to_string(),
       position: "Backend Developer".to_string(),
       state: AgentState::Discovery,
       memory: vec![]
@@ -302,11 +302,6 @@ impl SpecialFunctions for AgentBackendDeveloper {
 pub mod tests {
   use super::*;
 
-  #[test]
-  fn creates_new_agen_db_architect() {
-    let agent: AgentBackendDeveloper = AgentBackendDeveloper::new();
-    assert_eq!(agent.attributes.position, "Backend Developer");
-  }
 
   #[tokio::test]
   async fn develops_and_saves_website_backend() {

@@ -48,7 +48,7 @@ impl SpecialFunctions for AgentSolutionArchitect {
       // Handle discovery process
       AgentState::Discovery => {
 
-        // Get message from memory
+        // Extract message
         let msg_context: String = format!("{:?}", factsheet.project_description);
         let func_message: Message = extend_ai_function(print_project_scope, &msg_context);
 
@@ -95,7 +95,6 @@ pub mod tests {
       project_scope: None,
       external_urls: None,
       backend_code: None,
-      frontend_code: None,
       api_endpoint_schema: None
     };
 

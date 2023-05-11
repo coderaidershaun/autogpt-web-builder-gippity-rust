@@ -4,6 +4,7 @@ use reqwest::Client;
 use std::fs;
 
 pub const BACKEND_CODE_DIR: &str = "/Users/shaun/Code/DEVELOPMENT/autogippity/website/backend";
+pub const FRONTEND_CODE_DIR: &str = "/Users/shaun/Code/DEVELOPMENT/autogippity/website/frontend";
 
 /// Takes in both the string version of an AI function
 /// Combines this with the user input to encourage a structured printout in a program-like response
@@ -57,5 +58,12 @@ pub fn save_backend_code(contents: &String) {
 pub fn save_api_endpoints(api_endpoints: &String) {
   let path: String = format!("{}/api_endpoints.json", BACKEND_CODE_DIR);
   fs::write(path, api_endpoints)
+    .expect("Something went wrong saving the file");
+}
+
+// Save frontend code
+pub fn save_frontend_code(frontend_path: String, contents: &String) {
+  let path: String = format!("{}{}", FRONTEND_CODE_DIR, frontend_path);
+  fs::write(path, contents)
     .expect("Something went wrong saving the file");
 }

@@ -166,7 +166,6 @@ pub mod tests {
       project_scope: Some(project_scope),
       external_urls: None,
       backend_code: None,
-      frontend_code: None,
       api_endpoint_schema: None
     };
 

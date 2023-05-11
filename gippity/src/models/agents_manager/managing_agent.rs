@@ -42,7 +42,6 @@ impl ManagingAgent {
       project_scope: None,
       external_urls: None,
       backend_code: None,
-      frontend_code: None,
       api_endpoint_schema: None
     };
 
@@ -103,7 +102,7 @@ pub mod tests {
 
   #[tokio::test]
   async fn executes_building_a_website() {
-    let usr_request: &str = "need a full stack app that fetches binance crypto prices";
+    let usr_request: &str = "need a full stack app that fetches weather data";
     let mut managing_agent: ManagingAgent = ManagingAgent::new(usr_request.to_string()).await.expect("Error creating agent");
 
     managing_agent.execute_project().await;
