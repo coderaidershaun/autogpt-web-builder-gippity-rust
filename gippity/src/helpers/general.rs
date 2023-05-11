@@ -62,8 +62,14 @@ pub fn save_api_endpoints(api_endpoints: &String) {
 }
 
 // Save frontend code
-pub fn save_frontend_code(frontend_path: String, contents: &String) {
+pub fn save_frontend_code(frontend_path: &String, contents: &String) {
   let path: String = format!("{}{}", FRONTEND_CODE_DIR, frontend_path);
   fs::write(path, contents)
     .expect("Something went wrong saving the file");
+}
+
+// Get existing frontend code
+pub fn read_frontend_code_contents(frontend_path: &String) -> String {
+  let path: String = format!("{}{}", FRONTEND_CODE_DIR, frontend_path);
+  fs::read_to_string(path).expect("Something went wrong reading the file")
 }

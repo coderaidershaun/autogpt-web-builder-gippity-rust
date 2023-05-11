@@ -1,4 +1,5 @@
 use crate::ai_functions::frontend_developer::{
+  print_code_bugs_resolution,
   print_recommended_site_pages,
   print_recommended_site_pages_with_apis, 
   print_recommended_site_main_colours,
@@ -19,6 +20,7 @@ use crate::helpers::general::{
   check_status_code, 
   read_code_template_contents, 
   save_api_endpoints,
+  read_frontend_code_contents,
   BACKEND_CODE_DIR,
   FRONTEND_CODE_DIR
 };
@@ -47,7 +49,7 @@ pub enum FrontendBuildMode {
 
 
 // To define what stage the component development for each page is at
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum FrontendPageStage {
   Content,
   Wireframing,
@@ -100,7 +102,10 @@ pub struct DesignBuildSheet {
 #[derive(Debug)]
 pub struct AgentFrontendDeveloper {
   attributes: BasicAgent,
-  buildsheet: DesignBuildSheet
+  buildsheet: DesignBuildSheet,
+  bug_count: u8,
+  error_code: Option<String>,
+  operation_focus: String
 }
 
 impl AgentFrontendDeveloper {
@@ -127,7 +132,10 @@ impl AgentFrontendDeveloper {
     // Return Self
     Self {
       attributes,
-      buildsheet
+      buildsheet,
+      bug_count: 0,
+      error_code: None,
+      operation_focus: "logo".to_string()
     }
   }
 
@@ -229,7 +237,7 @@ impl AgentFrontendDeveloper {
 
 
   // Build logo component
-  async fn create_logo(&mut self, project_description: &String) {
+  async fn create_logo_component(&mut self, project_description: &String, file_path: &String) {
 
     // Structure message
     let msg_context: String = format!("PROJECT_DESCRIPTION: {}, BRAND_COLOURS: {:?}", 
@@ -251,15 +259,93 @@ impl AgentFrontendDeveloper {
       &msg_context);
 
     // Call GPT - Build complete Logo
-    println!("{} Agent: Building Logo Component..", {self.attributes.get_position()});
+    println!("{} Agent: Building Logo Component...", {self.attributes.get_position()});
     let logo_component: String = call_gpt(vec!(func_message)).await
       .expect("Failed to get response from LLM");
 
-    // Add API assignments to buildsheet
-    let file_path: String = "/src/components/logo/Logo.tsx".to_string();
+    // Save Component
     save_frontend_code(file_path, &logo_component);
   }
 
+
+  // Build navigation component
+  async fn create_navigation_component(&mut self, project_description: &String, file_path: &String) {
+
+    // Structure message
+    let pages: &Vec<String> = self.buildsheet.pages.as_ref().expect("Missing pages");
+    let msg_context: String = format!("WEBSITE_SPECIFICATION: {{
+      PROJECT_DESCRIPTION: {},
+      PAGES_WHICH_NEED_LINKS: {:?},
+      COLOUR_SCHEME: {:?}
+    }}", 
+      project_description, pages, self.buildsheet.brand_colours);
+    let func_message: Message = extend_ai_function(
+      print_header_navigation_react_component, &msg_context);
+
+    // Call GPT - Build SVG Logo
+    println!("{} Agent: Building Navigation component...", {self.attributes.get_position()});
+    let navigation_component: String = call_gpt(vec!(func_message)).await
+      .expect("Failed to get response from LLM");
+
+    // Save Component
+    save_frontend_code(file_path, &navigation_component);
+  }
+
+
+  // Fix buggy component code
+  async fn run_code_correction(&self, file_path: String) {
+
+    // Initialize
+    println!("Fixing component bugs...");
+    let buggy_code: String = read_frontend_code_contents(&file_path);
+
+    // Structure message
+    let msg_context: String = format!("ORIGINAL_CODE: {}, ERROR_MESSAGE: {:?}", 
+      buggy_code, self.error_code);
+    let func_message: Message = extend_ai_function(print_code_bugs_resolution, &msg_context);
+
+    // Call GPT - Correcting component code
+    println!("{} Agent: Working on component bug fixes...", {self.attributes.get_position()});
+    let updated_code: String = call_gpt(vec!(func_message)).await
+      .expect("Failed to get response from LLM");
+
+    // Save Component
+    save_frontend_code(&file_path, &updated_code);
+  }
+
+
+  // Frontend component test
+  async fn perform_component_test(&mut self) -> Result<(), String> {
+    println!("Testing component for {}...", self.operation_focus);
+    let build_frontend_server: std::process::Output = Command::new("yarn")
+      .arg("build")
+      .current_dir(FRONTEND_CODE_DIR)
+      .stdout(Stdio::piped())
+      .stderr(Stdio::piped())
+      .output()
+      .expect("Failed to run component test");
+
+    // Determine if build errors
+    if build_frontend_server.status.success() {
+      println!("Frontend component build successful...");
+      self.bug_count = 0;
+      return Ok(());
+
+    // Handle Build error
+    } else {
+      let error_arr: Vec<u8> = build_frontend_server.stderr;
+      let error_str: String = String::from_utf8(error_arr).unwrap();
+
+      // Check and return error
+      self.bug_count += 1;
+      self.error_code = Some(error_str);
+      if self.bug_count >= 2 {
+        panic!("Too many code failed attempts for {}", self.operation_focus);
+      } else {
+        return Err("Build failed".to_string())
+      }
+    }
+  }
 
 }
 
@@ -299,22 +385,75 @@ impl SpecialFunctions for AgentFrontendDeveloper {
           // Define Brand Colours
           self.define_brand_colours(&project_description).await;
 
-          // Create Logo
-          self.create_logo(&project_description).await;
-
           // Proceed to Working status
           self.attributes.state = AgentState::Working;
         },
 
-
         // Get pages, api assignments and branding
         AgentState::Working => {
+          
+          // Complete on building tasks around Infrastructure
+          if self.buildsheet.page_stage == None {
 
+            // Create logo
+            if self.operation_focus == "logo" {
+              
+              // Create or correct code
+              let file_path: String = "/src/components/shared/Logo.tsx".to_string();
+              if self.bug_count == 0 {
+                self.create_logo_component(&project_description, &file_path).await;
+              } else {
+                self.run_code_correction(file_path).await;
+              }
+
+              // Test Component
+              match self.perform_component_test().await {
+                Ok(_) => {
+                  self.operation_focus = "navigation_header".to_string();
+                },
+                Err(_) => {
+                  continue; // Loop back and perform code correction
+                }
+              }
+            }
+
+            // Create navigation header
+            if self.operation_focus == "navigation_header" {
+
+              // Create component
+              let file_path: String = "/src/components/shared/Navigation.tsx".to_string();
+              if self.bug_count == 0 {
+                self.create_navigation_component(&project_description, &file_path).await;
+              } else {
+                self.run_code_correction(file_path).await;
+              }
+
+              // Test Component
+              match self.perform_component_test().await {
+                Ok(_) => {
+                  self.operation_focus = "navigation_header".to_string();
+                },
+                Err(_) => {
+                  continue; // Loop back and perform code correction
+                }
+              }
+            }
+
+            
+
+          }
+
+
+
+
+          // Complete
           self.attributes.state = AgentState::Finished;
         },
 
         // Check Code Builds
         AgentState::UnitTesting => {
+
+
 
         }
 
@@ -344,9 +483,23 @@ pub mod tests {
 
     // Execute running agent
     agent.execute(&mut factsheet).await.expect("Unable to execute running agent");
-    let contents: String = fs::read_to_string("/Users/shaun/Code/DEVELOPMENT/autogippity/website/backend/src/main.rs")
-      .expect("Failed to read code");
-    assert!(contents.len() > 100);
+    dbg!(agent);
+  }
+
+  #[tokio::test]
+  async fn works_on_shared_components() {
+
+    // Create agent instance and site purpose
+    let mut agent: AgentFrontendDeveloper = AgentFrontendDeveloper::new();
+    agent.attributes.state = AgentState::Working;
+    agent.buildsheet.pages = Some(vec!["home_page".to_string(), "about_page".to_string()]);
+
+    // Initialze Factsheet
+    let mut factsheet: FactSheet = serde_json::from_str("{\"project_description\":\"Build a todo app for a fitness tracking goal\",\"project_scope\":{\"is_crud_required\":true,\"is_user_login_and_logout\":true,\"is_external_urls_required\":true},\"external_urls\":[\"https://api.exchangeratesapi.io/latest\"],\"backend_code\":null,\"frontend_code\":null,\"json_db_schema\":null}").unwrap();
+
+    // Execute running agent
+    agent.execute(&mut factsheet).await.expect("Unable to execute running agent");
+    dbg!(agent);
   }
 
 }

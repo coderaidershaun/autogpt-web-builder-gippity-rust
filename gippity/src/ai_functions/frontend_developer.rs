@@ -1,6 +1,18 @@
 use proc_macro::function_to_string;
 
 
+// Fix buggy component code
+#[function_to_string]
+pub fn print_code_bugs_resolution(_existing_code_and_error: &str) {
+  /// INPUT: Takes in existing code causing build failres along with errors caused by the code
+  /// FUNCTION: Writes the new and imporved React typescript component code with bugs fixed
+  /// NOTE: Functions considers that the code is made of React Typescript.
+  /// Therefore, it is allowed to use //@ts-ignore if that is the appropriate solution rather than guessing the solution
+  /// IMPORTANT: This function only prints a full react component with completed typescript code, nothing else.
+  println!(OUTPUT)
+}
+
+
 // Page Architecture
 #[function_to_string]
 pub fn print_recommended_site_pages(_project_description_and_backend_code_logic: &str) {
@@ -159,11 +171,28 @@ pub fn prints_completed_logo_with_brand_name_react_component(_website_specificat
 #[function_to_string]
 pub fn print_header_navigation_react_component(_website_specification: &str) {
   /// INPUT: Takes in a WEBSITE_SPECIFICATION for a websites frontend.
-  /// FUNCTION: Writes only the HTML code for a REACT TYPESCRIPT navigation header bar for the website
+  /// FUNCTION: Writes the code for a REACT TYPESCRIPT navigation header bar for a frontend website
   /// OUTPOUT: The navigation header bar includes the following
   ///   1 - The existing logo which shows as <Logo />, the logo should have an 'import Logo from "./Logo"' at the top of the component
   ///   2 - Page links based on the pages provided in the specification
   ///   3 - This should be responsive based upon the size of the screen using tailwind css. A small screen should have a burger menu with slider
+  ///   4 - Takes in a getter and setter prop called currentPage and setCurrentPage respectively
+  ///   5 - Depending on the page, a different color will show on the navigation links
+  /// TEMPLATE:
+  /// import Logo from "./Logo"
+  /// type Props = {
+  ///   currentPage: string;
+  ///   setCurrentPage: Any;
+  /// }
+  /// function Navigation({setCurrentPage, currentPage}: Props) {
+  ///   return (
+  ///     <div>
+  ///       YOUR COMPONENT CODE GOES HERE
+  ///     </div>
+  ///   )
+  /// }
+  /// export default Navigation
+  /// DO NOT LEAVE ANY CODE UNFINISHED FOR LATER. CODE EVERYTHING INCLUDING THE SLIDER MENU NOW.
   /// IMPORTANT: This function only prints a full react component with completed typescript code, nothing else.
   println!(OUTPUT)
 }
@@ -177,6 +206,15 @@ pub fn print_footer_navigation_react_component(_website_specification: &str) {
   /// OUTPOUT: The navigation footer bar includes the following
   ///   1 - Page links based on the pages provided in the specification
   ///   2 - Must be responsive and be a small fixed bar to the bottom of the screen if in mobile view
+  /// TEMPLATE:
+  /// function Footer() {
+  ///   return (
+  ///     <div>
+  ///       YOUR COMPONENT CODE GOES HERE
+  ///     </div>
+  ///   )
+  /// }
+  /// export default Footer
   /// IMPORTANT: This function only prints a full react component with completed typescript code, nothing else.
   println!(OUTPUT)
 }
