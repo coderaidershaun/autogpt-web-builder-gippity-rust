@@ -296,17 +296,7 @@ impl SpecialFunctions for AgentFrontendDeveloper {
 
           // Proceed to Working status
           self.attributes.state = AgentState::Working;
-
-
-          let factsh: String = serde_json::to_string(&factsheet).unwrap();
-          let buildsh: String = serde_json::to_string(&self.buildsheet).unwrap();
-          println!("{:?}", factsh); // !!!!!!!!!!!! REMOVE !!!!!!!!!!!!!!
-          println!("{:?}", buildsh); // !!!!!!!!!!!! REMOVE !!!!!!!!!!!!!!
-          
-
-          panic!("FORCED END");
           continue;
-
         },
 
         // Get pages, api assignments and branding
@@ -316,14 +306,6 @@ impl SpecialFunctions for AgentFrontendDeveloper {
           for component in BuildComponent::iter() {
             
 
-
-
-
-
-
-
-
-
             // !!!! REMOVE ONLY FOR TESTING !!!
             if component != BuildComponent::PageContent1 {
               continue;
@@ -331,11 +313,6 @@ impl SpecialFunctions for AgentFrontendDeveloper {
             if component == BuildComponent::PageContent2 {
               break;
             }
-
-
-
-
-
 
 
             // Update current operation focus to component
@@ -415,6 +392,14 @@ pub mod tests {
 
     // Create agent instance and site purpose
     let mut agent: AgentFrontendDeveloper = AgentFrontendDeveloper::new();
+    let factsheet_str: &str = "{\"project_description\":\"build a website that fetches and tracks fitness progress with timezone information\",\"project_scope\":{\"is_crud_required\":true,\"is_user_login_and_logout\":true,\"is_external_urls_required\":true},\"external_urls\":[\"https://ipapi.co/json\",\"https://wger.de/api/v2/\"],\"backend_code\":\"use actix_cors::Cors;\\nuse actix_web::{http::header, web, App, HttpServer, Responder, HttpResponse};\\nuse serde::{Deserialize, Serialize};\\nuse std::sync::Mutex;\\nuse std::collections::HashMap;\\nuse std::fs;\\nuse std::io::Write;\\nuse reqwest::Client as HttpClient;\\nuse async_trait::async_trait;\\n\\n#[derive(Serialize, Deserialize, Debug, Clone)]\\npub struct FitnessProgress {\\n    pub id: u64,\\n    pub user_id: u64,\\n    pub progress_data: String,\\n    pub timezone: String,\\n}\\n\\n#[derive(Serialize, Deserialize, Debug, Clone)]\\npub struct User {\\n    pub id: u64,\\n    pub username: String,\\n    pub password: String,\\n}\\n\\n#[derive(Serialize, Deserialize, Debug, Clone)]\\nstruct Database {\\n    fitness_progresses: HashMap<u64, FitnessProgress>,\\n    users: HashMap<u64, User>,\\n}\\n\\nimpl Database {\\n    fn new() -> Self {\\n        Self {\\n            fitness_progresses: HashMap::new(),\\n            users: HashMap::new(),\\n        }\\n    }\\n\\n    // FITNESS_PROGRESS CRUD OPERATIONS\\n    fn insert_progress(&mut self, progress: FitnessProgress) {\\n        self.fitness_progresses.insert(progress.id, progress);\\n    }\\n\\n    fn get_progress(&self, id: &u64) -> Option<&FitnessProgress> {\\n        self.fitness_progresses.get(id)\\n    }\\n\\n    fn get_all_progresses(&self) -> Vec<&FitnessProgress> {\\n        self.fitness_progresses.values().collect()\\n    }\\n\\n    fn delete_progress(&mut self, id: &u64) {\\n        self.fitness_progresses.remove(id);\\n    }\\n\\n    fn update_progress(&mut self, progress: FitnessProgress) {\\n        self.fitness_progresses.insert(progress.id, progress);\\n    }\\n\\n    // USER DATA RELATED OPERATIONS\\n    fn insert_user(&mut self, user: User) {\\n        self.users.insert(user.id, user);\\n    }\\n\\n    fn get_user_by_name(&self, username: &str) -> Option<&User> {\\n        self.users.values().find(|u| u.username == username)\\n    }\\n\\n    // DATABASE SAVING\\n    fn save_to_file(&self) -> std::io::Result<()> {\\n        let data = serde_json::to_string(&self)?;\\n        let mut file = fs::File::create(\\\"database.json\\\")?;\\n        file.write_all(data.as_bytes())?;\\n        Ok(())\\n    }\\n\\n    fn load_from_file() -> std::io::Result<Self> {\\n        let file_content = fs::read_to_string(\\\"database.json\\\")?;\\n        let db: Database = serde_json::from_str(&file_content)?;\\n        Ok(db)\\n    }\\n}\\n\\nstruct AppState {\\n    db: Mutex<Database>,\\n    http_client: HttpClient,\\n}\\n\\n#[async_trait]\\ntrait ExternalDataFetcher {\\n    async fn fetch_external_data(&self, url: &str) -> Result<String, reqwest::Error>;\\n}\\n\\n#[async_trait]\\nimpl ExternalDataFetcher for AppState {\\n    async fn fetch_external_data(&self, url: &str) -> Result<String, reqwest::Error> {\\n        let response = self.http_client.get(url).send().await?;\\n        let content = response.text().await?;\\n        Ok(content)\\n    }\\n}\\n\\nasync fn create_progress(\\n    app_state: web::Data<AppState>,\\n    progress: web::Json<FitnessProgress>,\\n) -> impl Responder {\\n    let mut db = app_state.db.lock().unwrap();\\n    db.insert_progress(progress.into_inner());\\n    let _ = db.save_to_file();\\n    HttpResponse::Ok().finish()\\n}\\n\\nasync fn read_progress(app_state: web::Data<AppState>, id: web::Path<u64>) -> impl Responder {\\n    let db = app_state.db.lock().unwrap();\\n    match db.get_progress(&id.into_inner()) {\\n        Some(progress) => HttpResponse::Ok().json(progress),\\n        None => HttpResponse::NotFound().finish(),\\n    }\\n}\\n\\nasync fn read_all_progresses(app_state: web::Data<AppState>) -> impl Responder {\\n    let db = app_state.db.lock().unwrap();\\n    let progresses = db.get_all_progresses();\\n    HttpResponse::Ok().json(progresses)\\n}\\n\\nasync fn update_progress(\\n    app_state: web::Data<AppState>,\\n    progress: web::Json<FitnessProgress>,\\n) -> impl Responder {\\n    let mut db = app_state.db.lock().unwrap();\\n    db.update_progress(progress.into_inner());\\n    let _ = db.save_to_file();\\n    HttpResponse::Ok().finish()\\n}\\n\\nasync fn delete_progress(app_state: web::Data<AppState>, id: web::Path<u64>) -> impl Responder {\\n    let mut db = app_state.db.lock().unwrap();\\n    db.delete_progress(&id.into_inner());\\n    let _ = db.save_to_file();\\n    HttpResponse::Ok().finish()\\n}\\n\\nasync fn register(app_state: web::Data<AppState>, user: web::Json<User>) -> impl Responder {\\n    let mut db = app_state.db.lock().unwrap();\\n    db.insert_user(user.into_inner());\\n    let _ = db.save_to_file();\\n    HttpResponse::Ok().finish()\\n}\\n\\nasync fn login(app_state: web::Data<AppState>, user: web::Json<User>) -> impl Responder {\\n    let db = app_state.db.lock().unwrap();\\n\\n    match db.get_user_by_name(&user.username) {\\n        Some(stored_user) if stored_user.password == user.password => {\\n            HttpResponse::Ok().body(\\\"Logged in!\\\")\\n        }\\n        _ => HttpResponse::BadRequest().body(\\\"Invalid username or password\\\"),\\n    }\\n}\\n\\n#[actix_web::main]\\nasync fn main() -> std::io::Result<()> {\\n    let db = match Database::load_from_file() {\\n        Ok(db) => db,\\n        Err(_) => Database::new(),\\n    };\\n\\n    let data = web::Data::new(AppState {\\n        db: Mutex::new(db),\\n        http_client: HttpClient::new(),\\n    });\\n\\n    HttpServer::new(move || {\\n        App::new()\\n            .wrap(\\n                Cors::permissive()\\n                    .allowed_origin_fn(|origin, _req_head| {\\n                        origin.as_bytes().starts_with(b\\\"http://localhost:\\\") || origin == \\\"null\\\"\\n                    })\\n                    .allowed_methods(vec![\\\"GET\\\", \\\"POST\\\", \\\"PUT\\\", \\\"DELETE\\\"])\\n                    .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])\\n                    .allowed_header(header::CONTENT_TYPE)\\n                    .supports_credentials()\\n                    .max_age(3600),\\n            )\\n            .app_data(data.clone())\\n            .route(\\\"/progress\\\", web::post().to(create_progress))\\n            .route(\\\"/progress\\\", web::get().to(read_all_progresses))\\n            .route(\\\"/progress/{id}\\\", web::get().to(read_progress))\\n            .route(\\\"/progress/{id}\\\", web::put().to(update_progress))\\n            .route(\\\"/progress/{id}\\\", web::delete().to(delete_progress))\\n            .route(\\\"/register\\\", web::post().to(register))\\n            .route(\\\"/login\\\", web::post().to(login))\\n    })\\n    .bind(\\\"127.0.0.1:8080\\\")?\\n    .run()\\n    .await\\n}\",\"api_endpoint_schema\":[{\"is_route_dynamic\":\"false\",\"method\":\"get\",\"request_body\":\"None\",\"response\":\"Array\",\"route\":\"/progress\"}]}";
+    let buildsheet_str: &str = "{\"pages\":[\"home_page\",\"progress_dashboard\"],\"pages_descriptons\":[{\"page_name\":\"home_page\",\"suggested_content_sections\":{\"banner_section\":\"Catchy title and subtitle showcasing the fitness progress tracking features\",\"call_to_action_section\":\"Encourage users to sign up and start tracking their fitness progress\",\"features_section\":\"Display key features of the website with icons and short descriptions\"}},{\"page_name\":\"progress_dashboard\",\"suggested_content_sections\":{\"add_progress_section\":\"Provide a form for the user to input new fitness progress data\",\"fitness_progress_section\":\"Display a visual representation of the user's fitness progress over time\",\"user_info_section\":\"Display user's name, timezone info and greetings based on the time of the day\"}}],\"api_assignments\":{\"home_page\":[{\"api_route\":\"/register\",\"method\":\"post\",\"route_type\":\"internal\"},{\"api_route\":\"/login\",\"method\":\"post\",\"route_type\":\"internal\"},{\"api_route\":\"https://ipapi.co/json\",\"method\":\"get\",\"route_type\":\"external\"}],\"progress_dashboard\":[{\"api_route\":\"/progress\",\"method\":\"post\",\"route_type\":\"internal\"},{\"api_route\":\"/progress\",\"method\":\"get\",\"route_type\":\"internal\"},{\"api_route\":\"/progress/{id}\",\"method\":\"get\",\"route_type\":\"internal\"},{\"api_route\":\"/progress/{id}\",\"method\":\"put\",\"route_type\":\"internal\"},{\"api_route\":\"/progress/{id}\",\"method\":\"delete\",\"route_type\":\"internal\"},{\"api_route\":\"https://wger.de/api/v2/\",\"method\":\"get\",\"route_type\":\"external\"}]},\"brand_colours\":[\"#32a852\",\"#0fa0d1\",\"#d10fcb\"],\"build_mode\":\"Infrastructure\"}";
+    let mut factsheet: FactSheet = serde_json::from_str(factsheet_str).unwrap();
+    let buildsheet: DesignBuildSheet = serde_json::from_str(buildsheet_str).unwrap();
+    agent.attributes.state = AgentState::Working;
+
+    agent.buildsheet = buildsheet;
+    agent.execute(&mut factsheet).await.expect("Unable to execute running agent");
     agent.attributes.state = AgentState::Working;
 
   }

@@ -1,52 +1,49 @@
 [
   {
-    "route": "/fitness_progress",
+    "route": "/progress",
     "is_route_dynamic": "false",
     "method": "post",
     "request_body": {
       "id": "number",
       "user_id": "number",
-      "timezone": "string",
-      "progress": "string",
-      "timestamp": "string"
+      "progress_data": "string",
+      "timezone": "string"
     },
     "response": "None"
   },
   {
-    "route": "/fitness_progress",
+    "route": "/progress",
     "is_route_dynamic": "false",
     "method": "get",
     "request_body": "None",
-    "response": "not_provided"
+    "response": "Array"
   },
   {
-    "route": "/fitness_progress/{id}",
+    "route": "/progress/{id}",
     "is_route_dynamic": "true",
     "method": "get",
     "request_body": "None",
     "response": {
       "id": "number",
       "user_id": "number",
-      "timezone": "string",
-      "progress": "string",
-      "timestamp": "string"
+      "progress_data": "string",
+      "timezone": "string"
     }
   },
   {
-    "route": "/fitness_progress/{id}",
+    "route": "/progress/{id}",
     "is_route_dynamic": "true",
     "method": "put",
     "request_body": {
       "id": "number",
       "user_id": "number",
-      "timezone": "string",
-      "progress": "string",
-      "timestamp": "string"
+      "progress_data": "string",
+      "timezone": "string"
     },
     "response": "None"
   },
   {
-    "route": "/fitness_progress/{id}",
+    "route": "/progress/{id}",
     "is_route_dynamic": "true",
     "method": "delete",
     "request_body": "None",
@@ -72,13 +69,6 @@
       "username": "string",
       "password": "string"
     },
-    "response": "not_provided"
-  },
-  {
-    "route": "/exercises",
-    "is_route_dynamic": "false",
-    "method": "get",
-    "request_body": "None",
-    "response": "not_provided"
+    "response": "None"
   }
 ]

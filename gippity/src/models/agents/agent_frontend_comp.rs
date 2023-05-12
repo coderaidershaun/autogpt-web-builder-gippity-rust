@@ -3,7 +3,11 @@ use crate::ai_functions::aifunc_frontend::{
   print_completed_logo_with_brand_name_react_component,
   print_header_navigation_react_component,
   print_footer_navigation_react_component,
-  print_react_typescript_hook_component
+  print_react_typescript_hook_component,
+  print_html_webpage_content_with_text,
+  print_create_react_component_with_API_integration,
+  print_create_full_react_component,
+  print_give_component_fantastic_styling
 };
 use crate::helpers::general::{
   save_frontend_code, 
@@ -137,31 +141,69 @@ impl BuildComponent {
       Self::PageContent1 | Self::PageContent2 => {
 
         // Extract page name
-        let page_name: &String = match self.name(){
-          "PageContent1" => &pages[0],
-          "PageContent2" => &pages[1],
+        let (page_name, page_index) = match self.name(){
+          "PageContent1" => (&pages[0], 0),
+          "PageContent2" => (&pages[1], 1),
           _ => panic!("Page not recognised")
         };
 
-        // Extract file path
+        // Extract page input information
         let file_path: String = self.filepath();
+        dbg!(&file_path);
         let react_hook_contents: String = read_frontend_code_contents(&file_path);
-        
 
-        // Get Content Wireframe
+        let page_api_endpoints = agent.buildsheet.api_assignments
+          .as_ref().unwrap().get(page_name);
 
+        let page_description: String = agent.buildsheet.pages_descriptons.as_ref()
+          .unwrap()[page_index].suggested_content_sections.to_string();
 
-        // Add Styling
+        // Initialize Page HTML Content and Wireframe
+        let msg_context: String = format!("WEBSITE SPECIFICATION: {{
+          PAGE: {},
+          CONTENT_SECTION_SUGGESTIONS: {:?},
+        }}", page_name, page_description);
 
+        // Create Wireframe and Content
+        let wireframe_content: String = ai_task_request(
+          msg_context, 
+          "Component Page Writer", 
+          get_function_string!(print_html_webpage_content_with_text), 
+          print_html_webpage_content_with_text).await;
 
-        // Add API Endpoints
+        // Initialize Page API Hook Integration
+        let msg_context: String = format!("API_ROUTES: {{
+          API_ENDPOINTS_RELATED_TO_COMPONENT: {:?},
+          REACT_HOOK_API_ENDPOINTS: {:?},
+        }}", page_api_endpoints, react_hook_contents);
 
+        // React API Display Content
+        let react_api_component_content: String = ai_task_request(
+          msg_context, 
+          "Component Page Writer", 
+          get_function_string!(print_create_react_component_with_API_integration), 
+          print_create_react_component_with_API_integration).await;
 
+        // Initialize create full react component
+        let msg_context: String = format!("API_COMPONENT: {} HTML_WIREFRAME: {},
+        }}", react_api_component_content, wireframe_content);
 
+        // Create Full React Component
+        let combined_react_component: String = ai_task_request(
+          msg_context, 
+          "Component Page Writer", 
+          get_function_string!(print_create_full_react_component), 
+          print_create_full_react_component).await;     
 
-        dbg!(page_name);
+        // Initialize create full react component
+        let msg_context: String = format!("REACT_COMPONENT: {}", combined_react_component);
+
+        // Create Component
+        self.create_and_save(
+          msg_context,
+          print_give_component_fantastic_styling
+        ).await;
       },
-
     };
   
 

@@ -255,9 +255,11 @@ pub fn print_react_typescript_hook_component(_api_endpoints: &str) {
 pub fn print_html_webpage_content_with_text(_page_content_spec: &str) {
   /// INPUT: Receives PAGE_SPECIFICATION and high level spec along with api data information that the page will receive
   /// OUTPUT: Writes HTML code only with written content based on PAGE_SPECIFICATION provided
+  /// NOTE: The page specification tells the function what type of content to write based on suggestions, 
+  /// the function then makes up the content for the site.
   /// RULES: 
   ///   1. Provides a lot of content, is not afraid to provide expert level wireframing
-  ///   2. Creates a class named as className for each tag but only gives it very basic responsive flex tailwind behaviour for wireframing
+  ///   2. Creates a className for each tag as "className" but only gives it very basic responsive flex tailwind behaviour for wireframing
   ///   3. Starts the html with <section>Content goes here!</section>. Does not bother to write all boilerplate html code as the content is all that matters
   ///   4. Does not write navigation bar or footer content as this already exists. Only the page content
   /// OUTPUT: Just the raw html code within and including the <section>Content goes here!</section> tags as described.
@@ -268,8 +270,9 @@ pub fn print_html_webpage_content_with_text(_page_content_spec: &str) {
 // Integration - Create Component Template - API Integration
 #[function_to_string]
 pub fn print_create_react_component_with_API_integration(_page_specification: &str) {
-  /// INPUT: Receives API_SPECIFICATION information with API routes relevant to page if any
-  /// OUTPUT: Converts the input into a full REACT TYPESCRIPT based component including handling the required API requests if any
+  /// INPUT: Receives API_SPECIFICATION information with API_ROUTES and API_HOOK relevant to page if any
+  /// OUTPUT: Converts the input into a full REACT TYPESCRIPT based component including handling the required API requests
+  /// and presenting the data in the component render section.
   /// RULES: 
   ///   1. Does not leave anything unfinished, writes ALL the code required to convert the Html into a fully working React Typescript component
   ///   2. useCall hook file is saved in the following directory for import "../../hooks/useCall". So import useCall from "../../hooks/useCall"
@@ -316,7 +319,7 @@ pub fn print_create_full_react_component(_page_content_spec: &str) {
 // Integration - Styling
 #[function_to_string]
 pub fn print_give_component_fantastic_styling(_page_specification: &str) {
-  /// INPUT: Receives a REACT_COMPONENT along with a PROJECT_DESCRIPTION
+  /// INPUT: Receives a REACT_COMPONENT
   /// OUTPUT: Significantly upgrades the styling and corrects any bugs of the component
   /// RULES: 
   ///   1. Significantly improves styling with Tailwind and if relevant @mui/icons-material"

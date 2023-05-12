@@ -1,9 +1,12 @@
 import "./App.css";
+import Controller from "./components/Controller";
 
 function App() {
   return (
     <>
-      <div>Hello</div>
+      <div>
+        <Controller />
+      </div>
     </>
   );
 }
