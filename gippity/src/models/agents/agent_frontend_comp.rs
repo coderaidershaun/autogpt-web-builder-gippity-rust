@@ -9,8 +9,6 @@ use crate::helpers::general::{save_frontend_code, ai_task_request, BACKEND_CODE_
 use crate::models::agents::agent_frontend::AgentFrontendDeveloper;
 use serde::{Serialize, Deserialize};
 use std::fs;
-
-use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
 // Used for decoding page names and suggested content
@@ -65,6 +63,9 @@ impl BuildComponent {
   // Prepare and create component
   pub async fn create_component(&self, agent: &AgentFrontendDeveloper, project_description: &String) {
 
+    // Extract pages
+    let pages: &Vec<String> = agent.buildsheet.pages.as_ref().expect("Missing pages");
+
     match self {
 
       Self::Logo => {
@@ -96,7 +97,6 @@ impl BuildComponent {
       Self::NavHeader | Self::NavFooter => {
 
         // Structure message
-        let pages: &Vec<String> = agent.buildsheet.pages.as_ref().expect("Missing pages");
         let msg_context: String = format!("WEBSITE_SPECIFICATION: {{
             PROJECT_DESCRIPTION: {},
             PAGES_WHICH_NEED_LINKS: {:?},
@@ -128,8 +128,29 @@ impl BuildComponent {
         ).await;
       },
 
-      Self::PageContent1 => {},
-      Self::PageContent2 => {}
+      Self::PageContent1 | Self::PageContent2 => {
+
+        // Extract page name
+        let page_name: &String = match self.name(){
+          "PageContent1" => &pages[0],
+          "PageContent2" => &pages[1],
+          _ => panic!("Page not recognised")
+        };
+
+        // Get Content Wireframe
+
+
+        // Add Styling
+
+
+        // Add API Endpoints
+
+
+
+
+        dbg!(page_name);
+      },
+
     };
   
 

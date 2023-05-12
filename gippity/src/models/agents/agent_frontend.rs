@@ -379,7 +379,7 @@ pub mod tests {
 
     // Execute running agent
     agent.execute(&mut factsheet).await.expect("Unable to execute running agent");
-    dbg!(agent);
+    // dbg!(agent);
   }
 
 }

@@ -250,18 +250,80 @@ pub fn print_react_typescript_hook_component(_api_endpoints: &str) {
 }
 
 
-// Integration - Content and wireframing
+// Integration - Wireframing and Content
 #[function_to_string]
-pub fn create_frontend_website_page_content(_page_content_spec: &str) {
-  /// INPUT: Receives page description and high level spec along with api data information that the page will receive
-  /// OUTPUT: Writes HTML code only with content based on spec
+pub fn print_html_webpage_content_with_text(_page_content_spec: &str) {
+  /// INPUT: Receives PAGE_SPECIFICATION and high level spec along with api data information that the page will receive
+  /// OUTPUT: Writes HTML code only with written content based on PAGE_SPECIFICATION provided
   /// RULES: 
   ///   1. Provides a lot of content, is not afraid to provide expert level wireframing
-  ///   2. This is JUST the html with each tag having an id, no classes
-  ///   3. Again: No classes will be added to tags. This is just the html structure with ids
-  ///   4. The id will describe what html tag does
-  /// 
+  ///   2. Creates a class named as className for each tag but only gives it very basic responsive flex tailwind behaviour for wireframing
+  ///   3. Starts the html with <section>Content goes here!</section>. Does not bother to write all boilerplate html code as the content is all that matters
+  ///   4. Does not write navigation bar or footer content as this already exists. Only the page content
+  /// OUTPUT: Just the raw html code within and including the <section>Content goes here!</section> tags as described.
   println!(OUTPUT)
 }
 
+
+// Integration - Create Component Template - API Integration
+#[function_to_string]
+pub fn print_create_react_component_with_API_integration(_page_specification: &str) {
+  /// INPUT: Receives API_SPECIFICATION information with API routes relevant to page if any
+  /// OUTPUT: Converts the input into a full REACT TYPESCRIPT based component including handling the required API requests if any
+  /// RULES: 
+  ///   1. Does not leave anything unfinished, writes ALL the code required to convert the Html into a fully working React Typescript component
+  ///   2. useCall hook file is saved in the following directory for import "../../hooks/useCall". So import useCall from "../../hooks/useCall"
+  ///   3. ALL relevant API Routes will be used as part of this component
+  ///   4. Does NOT use any extrernal libraries that are not included in this list: [axios, @mui/icons-material", react, tailwind]
+  /// ERROR HANDLING: All error handling includes "as any" to prevent build errors on type issues:
+  ///  catch (e as any) { ...
+  /// TEMPLATE:
+  /// function PageName() {
+  ///   return (
+  ///     <div>
+  ///       YOUR COMPONENT CODE GOES HERE
+  ///     </div>
+  ///   )
+  /// }
+  /// export default PageName  
+  println!(OUTPUT)
+}
+
+
+// Integration - Component Integration
+#[function_to_string]
+pub fn print_create_full_react_component(_page_content_spec: &str) {
+  /// INPUT: Receives HTML_CONTENT_WIREFRAME and REACT_TYPESCRYPT_COMPONENT code
+  /// OUTPUT: Combines ALL HTML_CONTENT and ALL REACT_TYPESCRYPT_COMPONENT into one MasterPage Component
+  /// RULES: 
+  ///   1. Does NOT use any extrernal libraries that are not included in this list: [axios, @mui/icons-material", react, tailwind]
+  ///   2. Ensures that ALL code will work as a React Typescript component
+  ///   3. Adds basic tailwind css styling and @mui/icons-material icons where relevant
+  /// TEMPLATE:
+  /// import useCall from "../../hooks/useCall"
+  /// function MasterPage() {
+  ///   return (
+  ///     <div className="w-full">
+  ///       YOUR COMPONENT CODE GOES HERE
+  ///     </div>
+  ///   )
+  /// }
+  /// export default MasterPage    
+  println!(OUTPUT)
+}
+
+
+// Integration - Styling
+#[function_to_string]
+pub fn print_give_component_fantastic_styling(_page_specification: &str) {
+  /// INPUT: Receives a REACT_COMPONENT along with a PROJECT_DESCRIPTION
+  /// OUTPUT: Significantly upgrades the styling and corrects any bugs of the component
+  /// RULES: 
+  ///   1. Significantly improves styling with Tailwind and if relevant @mui/icons-material"
+  ///   2. Leaves nothing to do later or unfinished in the code. This is a polished component. Everything must be great.
+  ///   3. Does NOT use any extrernal libraries that are not included in this list: [axios, @mui/icons-material", react, tailwind]
+  /// ERROR HANDLING: All error handling includes "as any" to prevent build errors on type issues
+  /// OUTPUT: Just prints the code for the full component. Nothing else. No ``` etc. Just the component code.
+  println!(OUTPUT)
+}
 
