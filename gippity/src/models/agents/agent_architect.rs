@@ -1,7 +1,7 @@
 use crate::models::agent_basic::basic_agent::{BasicAgent, AgentState};
 use crate::models::agent_basic::basic_traits::BasicTraits;
 use crate::models::agents::agent_traits::{SpecialFunctions, FactSheet, ProjectScope};
-use crate::ai_functions::solution_architect::{print_project_scope, print_site_urls};
+use crate::ai_functions::aifunc_architect::{print_project_scope, print_site_urls};
 use crate::helpers::command_line::PrintCommand;
 use crate::helpers::general::{ai_task_request_decoded, check_status_code};
 use async_trait::async_trait;

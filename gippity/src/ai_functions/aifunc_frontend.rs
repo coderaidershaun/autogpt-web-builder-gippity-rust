@@ -6,7 +6,9 @@ use proc_macro::function_to_string;
 pub fn print_code_bugs_resolution(_existing_code_and_error: &str) {
   /// INPUT: Takes in existing code causing build failres along with errors caused by the code
   /// FUNCTION: Writes the new and imporved React typescript component code with bugs fixed
-  /// NOTE: Functions considers that the code is made of React Typescript.
+  /// NOTES: 
+  ///   1. Functions considers that the code is made of React Typescript.
+  ///   2. Function removes anything which does not belong on the page, like ```typescript for example. Code should start with imports.
   /// Therefore, it is allowed to use //@ts-ignore if that is the appropriate solution rather than guessing the solution
   /// IMPORTANT: This function only prints a full react component with completed typescript code, nothing else.
   println!(OUTPUT)
@@ -162,7 +164,7 @@ pub fn print_completed_logo_with_brand_name_react_component(_website_specificati
   /// }
   /// export default Logo
   /// IMPORTANT: Tailwind CSS is used for styling. Does NOT use any extrernal libraries not included in this list: [axios, @mui/icons-material", react, tailwind]
-  /// REMEMBER: This function only prints React Typescript component code. Nothing else. Just the code.
+  /// REMEMBER: This function only prints React Typescript component code. Nothing else. Just the code and WITHOUT any backticks at the start of the file ```.
   println!(OUTPUT)
 }
 
@@ -193,7 +195,7 @@ pub fn print_header_navigation_react_component(_website_specification: &str) {
   /// }
   /// export default Navigation
   /// DO NOT LEAVE ANY CODE UNFINISHED FOR LATER. CODE EVERYTHING INCLUDING THE SLIDER MENU NOW.
-  /// IMPORTANT: This function only prints a full react component with completed typescript code, nothing else.
+  /// IMPORTANT: This function only prints a full react component with completed typescript code, nothing else. Just the code and WITHOUT any backticks at the start of the file ```.
   /// IMPORTANT: Tailwind CSS is used for styling. Does NOT use any extrernal libraries not included in this list: [axios, @mui/icons-material", react, tailwind]
   println!(OUTPUT)
 }
@@ -222,7 +224,7 @@ pub fn print_footer_navigation_react_component(_website_specification: &str) {
   ///   )
   /// }
   /// export default Footer
-  /// IMPORTANT: This function only prints a full react component with completed typescript code, nothing else.
+  /// IMPORTANT: This function only prints a full react component with completed typescript code, nothing else. Just the code and WITHOUT any backticks at the start of the file ```.
   /// IMPORTANT: Tailwind CSS is used for styling. Does NOT use any extrernal libraries not included in this list: [axios, @mui/icons-material", react, tailwind]
   println!(OUTPUT)
 }
@@ -235,9 +237,10 @@ pub fn print_react_typescript_hook_component(_api_endpoints: &str) {
   /// OUTPUT: A full REACT "useCall" TYPESCRIPT CUSTOM REACT HOOK component connecting to and returning data for ALL of the endpoints. No endpoints are left out
   /// NOTE: All code is fully written and interfaces made available for decoding any returned data
   /// COMPONENT TITLE: The components title is "useCall"
+  /// API BASE ROUTE: endpoints are called from http://localhost:8080
   /// IMPORTANT: The component is fully working with typescript annotations types declared for everything or //@ts-ignore if unsure
   /// IMPORTANT: Does NOT use any extrernal libraries not included in this list: [axios, @mui/icons-material", react, tailwind]
-  /// FORMAT: Just prints the react typescript component, Nothing else. All API endpoints are called from http://localhost:8080
+  /// FORMAT: Just prints the react typescript component, Nothing else. . Just the code and WITHOUT any backticks at the start of the file ```.
   /// ERROR HANDLING: All error handling includes "as any" to prevent build errors on type issues:
   ///  catch (e) {
   ///   setError(e as any);

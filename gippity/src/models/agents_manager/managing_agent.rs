@@ -1,9 +1,9 @@
 use crate::models::agent_basic::basic_agent::{BasicAgent, AgentState};
 use crate::models::agents::agent_traits::{SpecialFunctions, FactSheet};
-use crate::models::agents::solution_architect::AgentSolutionArchitect;
-use crate::models::agents::backend_developer::AgentBackendDeveloper;
+use crate::models::agents::agent_architect::AgentSolutionArchitect;
+use crate::models::agents::agent_backend::AgentBackendDeveloper;
 use crate::models::general::llm::Message;
-use crate::ai_functions::managing_agent::convert_user_input_to_goal;
+use crate::ai_functions::aifunc_managing::convert_user_input_to_goal;
 use crate::helpers::general::extend_ai_function;
 use crate::apis::call_request::call_gpt;
 

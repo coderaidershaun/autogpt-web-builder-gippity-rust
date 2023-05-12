@@ -1,31 +1,19 @@
-use crate::ai_functions::frontend_developer::{
+use crate::ai_functions::aifunc_frontend::{
   print_code_bugs_resolution,
   print_recommended_site_pages,
   print_recommended_site_pages_with_apis, 
   print_recommended_site_main_colours,
-  print_svg_logo,
-  print_completed_logo_with_brand_name_react_component,
-  print_header_navigation_react_component,
-  print_footer_navigation_react_component,
-  print_react_typescript_hook_component
 };
-use crate::models::agents::agent_traits::{
-  SpecialFunctions, 
-  FactSheet
-};
-
 use crate::helpers::general::{
-  extend_ai_function, 
   save_frontend_code,
-  check_status_code, 
-  read_code_template_contents, 
-  save_api_endpoints,
   ai_task_request_decoded,
   ai_task_request,
   read_frontend_code_contents,
   BACKEND_CODE_DIR,
   FRONTEND_CODE_DIR
 };
+use crate::models::agents::agent_frontend_comp::BuildComponent;
+use crate::models::agents::agent_traits::{SpecialFunctions, FactSheet};
 use crate::models::agent_basic::basic_agent::{BasicAgent, AgentState};
 use crate::helpers::command_line::PrintCommand;
 use async_trait::async_trait;
@@ -33,25 +21,15 @@ use serde::{Serialize, Deserialize};
 use std::fs;
 use std::process::{Command, Stdio};
 use std::collections::HashMap;
+use strum::IntoEnumIterator;
 
 
 // To define what stage the frontend developer is at
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum FrontendBuildMode {
-  Infrastructure = 1,
-  PageComponents = 2,
-  Completion = 3
-}
-
-
-// To define what stage the component development for each page is at
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub enum FrontendPageStage {
-  Content,
-  Wireframing,
-  Developing,
-  APIIntegration,
-  Styling,
+  Infrastructure,
+  PageComponents,
+  Completion
 }
 
 
@@ -89,7 +67,6 @@ pub struct DesignBuildSheet {
   pub pages_descriptons: Option<Vec<SitePages>>,
   pub api_assignments: Option<PageRoutes>,
   pub brand_colours: Option<Vec<String>>,
-  pub page_stage: Option<FrontendPageStage>,
   pub build_mode: FrontendBuildMode
 }
 
@@ -97,11 +74,10 @@ pub struct DesignBuildSheet {
 // Solution Architect
 #[derive(Debug)]
 pub struct AgentFrontendDeveloper {
-  attributes: BasicAgent,
-  buildsheet: DesignBuildSheet,
-  bug_count: u8,
-  error_code: Option<String>,
-  operation_focus: String
+  pub attributes: BasicAgent,
+  pub buildsheet: DesignBuildSheet,
+  pub bug_count: u8,
+  pub operation_focus: BuildComponent
 }
 
 impl AgentFrontendDeveloper {
@@ -121,7 +97,6 @@ impl AgentFrontendDeveloper {
       pages_descriptons: None,
       api_assignments: None,
       brand_colours: None,
-      page_stage: None,
       build_mode: FrontendBuildMode::Infrastructure
     };
 
@@ -130,8 +105,7 @@ impl AgentFrontendDeveloper {
       attributes,
       buildsheet,
       bug_count: 0,
-      error_code: None,
-      operation_focus: "logo".to_string()
+      operation_focus: BuildComponent::Logo
     }
   }
 
@@ -224,114 +198,16 @@ impl AgentFrontendDeveloper {
   }
 
 
-  // Build logo component
-  async fn create_logo_component(&mut self, project_description: &String, file_path: &String) {
-
-    // Structure message
-    let msg_context: String = format!("PROJECT_DESCRIPTION: {}, BRAND_COLOURS: {:?}", project_description, self.buildsheet.brand_colours);
-
-    // Retrieve AI Reponse
-    let ai_response_svg_logo: String = ai_task_request(
-      msg_context, 
-      &self.attributes.position, 
-      get_function_string!(print_svg_logo), 
-      print_svg_logo).await;
-
-    // Structure message for logo creation
-    let msg_context: String = format!("WEBSITE SPECIFICATION: {{
-      SVG_LOGO: {},
-      PAGES: {:?},
-    }}", project_description, ai_response_svg_logo);
-
-    // Retrieve AI Reponse
-    let ai_response: String = ai_task_request(
-      msg_context, 
-      &self.attributes.position, 
-      get_function_string!(print_completed_logo_with_brand_name_react_component), 
-      print_completed_logo_with_brand_name_react_component).await;
-
-    // Save Logo Component
-    save_frontend_code(file_path, &ai_response);
-  }
-
-
-  // Build navigation header component
-  async fn create_navigation_header_component(&mut self, project_description: &String, file_path: &String) {
-
-    // Structure message
-    let pages: &Vec<String> = self.buildsheet.pages.as_ref().expect("Missing pages");
-    let msg_context: String = format!("WEBSITE_SPECIFICATION: {{
-        PROJECT_DESCRIPTION: {},
-        PAGES_WHICH_NEED_LINKS: {:?},
-        COLOUR_SCHEME: {:?}
-      }}", 
-      project_description, pages, self.buildsheet.brand_colours);
-
-    // Retrieve AI Reponse
-    let ai_response: String = ai_task_request(
-      msg_context, 
-      &self.attributes.position, 
-      get_function_string!(print_header_navigation_react_component), 
-      print_header_navigation_react_component).await;
-
-    // Save Navigation Header Component
-    save_frontend_code(file_path, &ai_response);
-  }
-
-
-  // Build navigation footer component
-  async fn create_navigation_footer_component(&mut self, project_description: &String, file_path: &String) {
-
-    // Structure message
-    let pages: &Vec<String> = self.buildsheet.pages.as_ref().expect("Missing pages");
-    let msg_context: String = format!("WEBSITE_SPECIFICATION: {{
-        PROJECT_DESCRIPTION: {},
-        PAGES_WHICH_NEED_LINKS: {:?},
-        COLOUR_SCHEME: {:?}
-      }}", 
-      project_description, pages, self.buildsheet.brand_colours);
-
-    // Retrieve AI Reponse
-    let ai_response: String = ai_task_request(
-      msg_context, 
-      &self.attributes.position, 
-      get_function_string!(print_footer_navigation_react_component), 
-      print_footer_navigation_react_component).await;
-
-    // Save Footer Navigation Component
-    save_frontend_code(file_path, &ai_response);
-  }
-
-
-  // Build navigation footer component
-  async fn create_react_custom_hook_component(&mut self, api_endpoints: &String, file_path: &String) {
-
-    // Structure message
-    let msg_context: String = format!("API_ENDPOINTS_JSON_SCHEMA: {}", api_endpoints);
-
-    // Retrieve AI Reponse
-    let ai_response: String = ai_task_request(
-      msg_context, 
-      &self.attributes.position, 
-      get_function_string!(print_react_typescript_hook_component), 
-      print_react_typescript_hook_component).await;
-
-    // Save Footer Navigation Component
-    save_frontend_code(file_path, &ai_response);
-  }
-
-
-
-
   // Fix buggy component code
-  async fn run_code_correction(&self, file_path: String) {
+  async fn run_code_correction(&self, file_path: String, error_code: String) {
 
     // Initialize
-    PrintCommand::UnitTest.print_agent_message(self.attributes.position.as_str(), "Fixing component bugs");
+    PrintCommand::UnitTest.print_agent_message(self.attributes.position.as_str(), 
+      "Fixing component bugs");
     let buggy_code: String = read_frontend_code_contents(&file_path);
 
     // Structure message
-    let msg_context: String = format!("ORIGINAL_CODE: {}, ERROR_MESSAGE: {:?}", buggy_code, self.error_code);
+    let msg_context: String = format!("ORIGINAL_CODE: {}, ERROR_MESSAGE: {:?}", buggy_code, error_code);
 
     // Retrieve AI Reponse
     let ai_response: String = ai_task_request(
@@ -347,7 +223,7 @@ impl AgentFrontendDeveloper {
 
   // Frontend component test
   async fn perform_component_test(&mut self) -> Result<(), String> {
-    let test_statement = format!("Testing Component: {}", self.operation_focus);
+    let test_statement = format!("Testing Component: {}", self.operation_focus.name());
     PrintCommand::UnitTest.print_agent_message(self.attributes.position.as_str(), test_statement.as_str());
     let build_frontend_server: std::process::Output = Command::new("yarn")
       .arg("build")
@@ -370,13 +246,12 @@ impl AgentFrontendDeveloper {
 
       // Check and return error
       self.bug_count += 1;
-      self.error_code = Some(error_str);
       if self.bug_count >= 2 {
         PrintCommand::Issue.print_agent_message(self.attributes.position.as_str(), "Too many code failures");
         PrintCommand::Issue.print_agent_message(self.attributes.position.as_str(), "Remember: check frontend builds before retrying");
-        panic!("Too many code failed attempts for {}", self.operation_focus);
+        panic!("Too many code failed attempts for {}", self.operation_focus.name());
       } else {
-        return Err("Build failed".to_string())
+        return Err(error_str)
       }
     }
   }
@@ -427,110 +302,33 @@ impl SpecialFunctions for AgentFrontendDeveloper {
         // Get pages, api assignments and branding
         AgentState::Working => {
           
-          // Complete on building tasks around Infrastructure
-          if self.buildsheet.page_stage == None {
-
-            /*
-              LOGO
-              Creates logo component to be imported into NavBar
-            */
-            if self.operation_focus == "logo" {
-              
-              // Create or correct code
-              let file_path: String = "/src/components/shared/Logo.tsx".to_string();
-              if self.bug_count == 0 {
-                self.create_logo_component(&project_description, &file_path).await;
-              } else {
-                self.run_code_correction(file_path).await;
-              }
-
-              // Test Component
-              match self.perform_component_test().await {
-                Ok(_) => {
-                  self.operation_focus = "navigation_header".to_string();
-                },
-                Err(_) => {
-                  continue; // Loop back and perform code correction
-                }
-              }
+          // Loop through components
+          for component in BuildComponent::iter() {
+            
+            // !!!! REMOVE ONLY FOR TESTING !!!
+            if component != BuildComponent::PageContent1 {
+              continue;
             }
 
-            /*
-              NAVIGATION HEADER
-              Creates app navigation component for header
-            */
-            if self.operation_focus == "navigation_header" {
+            // Update current operation focus to component
+            self.operation_focus = component.clone();
+            component.create_component(&self, &project_description).await;
 
-              // Create component
-              let file_path: String = "/src/components/shared/Navigation.tsx".to_string();
-              if self.bug_count == 0 {
-                self.create_navigation_header_component(&project_description, &file_path).await;
-              } else {
-                self.run_code_correction(file_path).await;
-              }
+            // Unit test component
+            let test_res: Result<(), String> = self.perform_component_test().await;
+            match test_res {
 
-              // Test Component
-              match self.perform_component_test().await {
-                Ok(_) => {
-                  self.operation_focus = "navigation_footer".to_string();
-                },
-                Err(_) => {
-                  continue; // Loop back and perform code correction
-                }
-              }
-            }
+              // Continue to next component
+              Ok(()) => continue,
 
-            /*
-              NAVIGATION FOOTER
-              Creates app navigation component for footer
-            */
-            if self.operation_focus == "navigation_footer" {
+              // Fix bugs for current component
+              Err(err_str) => {
+                let file_path: String = self.operation_focus.filepath();
+                self.run_code_correction(file_path, err_str).await;
 
-              // Create component
-              let file_path: String = "/src/components/shared/Footer.tsx".to_string();
-              if self.bug_count == 0 {
-                self.create_navigation_footer_component(&project_description, &file_path).await;
-              } else {
-                self.run_code_correction(file_path).await;
-              }
-
-              // Test Component
-              match self.perform_component_test().await {
-                Ok(_) => {
-                  self.operation_focus = "use_call_react_hook".to_string();
-                },
-                Err(_) => {
-                  continue; // Loop back and perform code correction
-                }
-              }
-            }
-
-            /*
-              useCALL CUSTOM HOOK
-              Creates component which makes all API calls
-            */
-            if self.operation_focus == "use_call_react_hook" {
-
-              // Load API Endpoints
-              let path: String = format!("{}/api_endpoints.json", BACKEND_CODE_DIR);
-              let api_endpoints: String = fs::read_to_string(path).expect("Something went wrong reading the file");
-
-              // Create component
-              let file_path: String = "/src/hooks/useCall.tsx".to_string();
-              if self.bug_count == 0 {
-                self.create_react_custom_hook_component(&api_endpoints, &file_path).await;
-              } else {
-                self.run_code_correction(file_path).await;
-              }
-
-              // Test Component
-              match self.perform_component_test().await {
-                Ok(_) => {
-                  self.operation_focus = "pages".to_string();
-                },
-                Err(_) => {
-                  continue; // Loop back and perform code correction
-                }
+                // Perform one more test
+                let _ = self.perform_component_test().await;
+                continue;
               }
             }
           }
@@ -538,13 +336,6 @@ impl SpecialFunctions for AgentFrontendDeveloper {
           // Complete
           self.attributes.state = AgentState::Finished;
         },
-
-        // Perform full site testing
-        AgentState::UnitTesting => {
-
-
-
-        }
 
         // Ensure all cases are covered
         _ => {}
@@ -582,7 +373,6 @@ pub mod tests {
     let mut agent: AgentFrontendDeveloper = AgentFrontendDeveloper::new();
     agent.attributes.state = AgentState::Working;
     agent.buildsheet.pages = Some(vec!["home_page".to_string(), "about_page".to_string()]);
-    agent.operation_focus = "use_call_react_hook".to_string();
 
     // Initialze Factsheet
     let mut factsheet: FactSheet = serde_json::from_str("{\"project_description\":\"Build a todo app for a fitness tracking goal\",\"project_scope\":{\"is_crud_required\":true,\"is_user_login_and_logout\":true,\"is_external_urls_required\":true},\"external_urls\":[\"https://api.exchangeratesapi.io/latest\"],\"backend_code\":null,\"frontend_code\":null,\"json_db_schema\":null}").unwrap();

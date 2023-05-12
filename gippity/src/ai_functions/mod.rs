@@ -1,4 +1,4 @@
-pub mod backend_developer;
-pub mod frontend_developer;
-pub mod managing_agent;
-pub mod solution_architect;
+pub mod aifunc_backend;
+pub mod aifunc_frontend;
+pub mod aifunc_managing;
+pub mod aifunc_architect;

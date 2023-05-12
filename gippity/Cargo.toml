@@ -11,7 +11,9 @@ reqwest = { version = "0.11.17", features = ["json"] }
 serde = { version = "1.0.160", features = ["derive"] }
 serde_json = "1.0.96"
 tokio = { version = "1.28.0", features = ["full"] }
-proc_macro = { path = "../proc_macro" }
 crossterm = "0.26.1"
 async-trait = "0.1.68"
 webbrowser = "0.8.9"
+strum = "0.24.1"
+strum_macros = "0.24.3"
+proc_macro = { path = "../proc_macro" }
