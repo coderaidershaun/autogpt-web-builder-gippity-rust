@@ -303,11 +303,31 @@ impl AgentFrontendDeveloper {
   }
 
 
+  // Build navigation footer component
+  async fn create_react_custom_hook_component(&mut self, api_endpoints: &String, file_path: &String) {
+
+    // Structure message
+    let msg_context: String = format!("API_ENDPOINTS_JSON_SCHEMA: {}", api_endpoints);
+
+    // Retrieve AI Reponse
+    let ai_response: String = ai_task_request(
+      msg_context, 
+      &self.attributes.position, 
+      get_function_string!(print_react_typescript_hook_component), 
+      print_react_typescript_hook_component).await;
+
+    // Save Footer Navigation Component
+    save_frontend_code(file_path, &ai_response);
+  }
+
+
+
+
   // Fix buggy component code
   async fn run_code_correction(&self, file_path: String) {
 
     // Initialize
-    println!("Fixing component bugs...");
+    PrintCommand::UnitTest.print_agent_message(self.attributes.position.as_str(), "Fixing component bugs");
     let buggy_code: String = read_frontend_code_contents(&file_path);
 
     // Structure message
@@ -410,7 +430,10 @@ impl SpecialFunctions for AgentFrontendDeveloper {
           // Complete on building tasks around Infrastructure
           if self.buildsheet.page_stage == None {
 
-            // Create logo
+            /*
+              LOGO
+              Creates logo component to be imported into NavBar
+            */
             if self.operation_focus == "logo" {
               
               // Create or correct code
@@ -432,7 +455,10 @@ impl SpecialFunctions for AgentFrontendDeveloper {
               }
             }
 
-            // Create navigation header
+            /*
+              NAVIGATION HEADER
+              Creates app navigation component for header
+            */
             if self.operation_focus == "navigation_header" {
 
               // Create component
@@ -454,13 +480,45 @@ impl SpecialFunctions for AgentFrontendDeveloper {
               }
             }
 
-            // Create navigation header
+            /*
+              NAVIGATION FOOTER
+              Creates app navigation component for footer
+            */
             if self.operation_focus == "navigation_footer" {
 
               // Create component
               let file_path: String = "/src/components/shared/Footer.tsx".to_string();
               if self.bug_count == 0 {
                 self.create_navigation_footer_component(&project_description, &file_path).await;
+              } else {
+                self.run_code_correction(file_path).await;
+              }
+
+              // Test Component
+              match self.perform_component_test().await {
+                Ok(_) => {
+                  self.operation_focus = "use_call_react_hook".to_string();
+                },
+                Err(_) => {
+                  continue; // Loop back and perform code correction
+                }
+              }
+            }
+
+            /*
+              useCALL CUSTOM HOOK
+              Creates component which makes all API calls
+            */
+            if self.operation_focus == "use_call_react_hook" {
+
+              // Load API Endpoints
+              let path: String = format!("{}/api_endpoints.json", BACKEND_CODE_DIR);
+              let api_endpoints: String = fs::read_to_string(path).expect("Something went wrong reading the file");
+
+              // Create component
+              let file_path: String = "/src/hooks/useCall.tsx".to_string();
+              if self.bug_count == 0 {
+                self.create_react_custom_hook_component(&api_endpoints, &file_path).await;
               } else {
                 self.run_code_correction(file_path).await;
               }
@@ -475,7 +533,6 @@ impl SpecialFunctions for AgentFrontendDeveloper {
                 }
               }
             }
-            
           }
 
           // Complete
@@ -525,6 +582,7 @@ pub mod tests {
     let mut agent: AgentFrontendDeveloper = AgentFrontendDeveloper::new();
     agent.attributes.state = AgentState::Working;
     agent.buildsheet.pages = Some(vec!["home_page".to_string(), "about_page".to_string()]);
+    agent.operation_focus = "use_call_react_hook".to_string();
 
     // Initialze Factsheet
     let mut factsheet: FactSheet = serde_json::from_str("{\"project_description\":\"Build a todo app for a fitness tracking goal\",\"project_scope\":{\"is_crud_required\":true,\"is_user_login_and_logout\":true,\"is_external_urls_required\":true},\"external_urls\":[\"https://api.exchangeratesapi.io/latest\"],\"backend_code\":null,\"frontend_code\":null,\"json_db_schema\":null}").unwrap();

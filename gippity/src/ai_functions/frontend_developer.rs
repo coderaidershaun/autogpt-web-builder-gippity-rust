@@ -231,12 +231,33 @@ pub fn print_footer_navigation_react_component(_website_specification: &str) {
 // Integration - React Hooks
 #[function_to_string]
 pub fn print_react_typescript_hook_component(_api_endpoints: &str) {
-  /// INPUT: Takes in a list of API_ENDPOINTS
-  /// OUTPUT: A full REACT TYPESCRIPT component connecting to and returning data for ALL of the endpoints
-  /// FORMAT: Just prints the react typescript component, Nothing else.
+  /// INPUT: Takes in a list of API_ENDPOINTS_JSON_SCHEMA and with their request and response schema. All these endpoints are called from http://localhost:8080
+  /// OUTPUT: A full REACT "useCall" TYPESCRIPT CUSTOM REACT HOOK component connecting to and returning data for ALL of the endpoints. No endpoints are left out
+  /// NOTE: All code is fully written and interfaces made available for decoding any returned data
   /// COMPONENT TITLE: The components title is "useCall"
   /// IMPORTANT: The component is fully working with typescript annotations types declared for everything or //@ts-ignore if unsure
-  /// IMPORTANT: Tailwind CSS is used for styling. Does NOT use any extrernal libraries not included in this list: [axios, @mui/icons-material", react, tailwind]
+  /// IMPORTANT: Does NOT use any extrernal libraries not included in this list: [axios, @mui/icons-material", react, tailwind]
+  /// FORMAT: Just prints the react typescript component, Nothing else. All API endpoints are called from http://localhost:8080
+  /// ERROR HANDLING: All error handling includes "as any" to prevent build errors on type issues:
+  ///  catch (e) {
+  ///   setError(e as any);
+  ///   ...
+  ///  }
+  println!(OUTPUT)
+}
+
+
+// Integration - Content and wireframing
+#[function_to_string]
+pub fn create_frontend_website_page_content(_page_content_spec: &str) {
+  /// INPUT: Receives page description and high level spec along with api data information that the page will receive
+  /// OUTPUT: Writes HTML code only with content based on spec
+  /// RULES: 
+  ///   1. Provides a lot of content, is not afraid to provide expert level wireframing
+  ///   2. This is JUST the html with each tag having an id, no classes
+  ///   3. Again: No classes will be added to tags. This is just the html structure with ids
+  ///   4. The id will describe what html tag does
+  /// 
   println!(OUTPUT)
 }
 
