@@ -1,48 +1,55 @@
 [
   {
-    "route": "/forex_price",
+    "route": "/fitness_progress",
     "is_route_dynamic": "false",
     "method": "post",
     "request_body": {
       "id": "number",
-      "name": "string",
-      "value": "number"
+      "user_id": "number",
+      "timezone": "string",
+      "progress": "string",
+      "timestamp": "string"
     },
     "response": "None"
   },
   {
-    "route": "/forex_price",
+    "route": "/fitness_progress",
     "is_route_dynamic": "false",
     "method": "get",
     "request_body": "None",
-    "response": [
-      {
-        "id": "number",
-        "name": "string",
-        "value": "number"
-      }
-    ]
+    "response": "not_provided"
   },
   {
-    "route": "/forex_price/{id}",
+    "route": "/fitness_progress/{id}",
     "is_route_dynamic": "true",
     "method": "get",
     "request_body": "None",
     "response": {
       "id": "number",
-      "name": "string",
-      "value": "number"
+      "user_id": "number",
+      "timezone": "string",
+      "progress": "string",
+      "timestamp": "string"
     }
   },
   {
-    "route": "/forex_price/{id}",
+    "route": "/fitness_progress/{id}",
     "is_route_dynamic": "true",
     "method": "put",
     "request_body": {
       "id": "number",
-      "name": "string",
-      "value": "number"
+      "user_id": "number",
+      "timezone": "string",
+      "progress": "string",
+      "timestamp": "string"
     },
+    "response": "None"
+  },
+  {
+    "route": "/fitness_progress/{id}",
+    "is_route_dynamic": "true",
+    "method": "delete",
+    "request_body": "None",
     "response": "None"
   },
   {
@@ -65,6 +72,13 @@
       "username": "string",
       "password": "string"
     },
-    "response": "None"
+    "response": "not_provided"
+  },
+  {
+    "route": "/exercises",
+    "is_route_dynamic": "false",
+    "method": "get",
+    "request_body": "None",
+    "response": "not_provided"
   }
 ]

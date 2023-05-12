@@ -296,7 +296,17 @@ impl SpecialFunctions for AgentFrontendDeveloper {
 
           // Proceed to Working status
           self.attributes.state = AgentState::Working;
+
+
+          let factsh: String = serde_json::to_string(&factsheet).unwrap();
+          let buildsh: String = serde_json::to_string(&self.buildsheet).unwrap();
+          println!("{:?}", factsh); // !!!!!!!!!!!! REMOVE !!!!!!!!!!!!!!
+          println!("{:?}", buildsh); // !!!!!!!!!!!! REMOVE !!!!!!!!!!!!!!
+          
+
+          panic!("FORCED END");
           continue;
+
         },
 
         // Get pages, api assignments and branding
@@ -305,10 +315,28 @@ impl SpecialFunctions for AgentFrontendDeveloper {
           // Loop through components
           for component in BuildComponent::iter() {
             
+
+
+
+
+
+
+
+
+
             // !!!! REMOVE ONLY FOR TESTING !!!
             if component != BuildComponent::PageContent1 {
               continue;
             }
+            if component == BuildComponent::PageContent2 {
+              break;
+            }
+
+
+
+
+
+
 
             // Update current operation focus to component
             self.operation_focus = component.clone();
@@ -380,6 +408,15 @@ pub mod tests {
     // Execute running agent
     agent.execute(&mut factsheet).await.expect("Unable to execute running agent");
     // dbg!(agent);
+  }
+
+  #[tokio::test]
+  async fn works_on_final_pages() {
+
+    // Create agent instance and site purpose
+    let mut agent: AgentFrontendDeveloper = AgentFrontendDeveloper::new();
+    agent.attributes.state = AgentState::Working;
+
   }
 
 }

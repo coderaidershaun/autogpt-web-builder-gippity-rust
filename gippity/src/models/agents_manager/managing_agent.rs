@@ -2,6 +2,7 @@ use crate::models::agent_basic::basic_agent::{BasicAgent, AgentState};
 use crate::models::agents::agent_traits::{SpecialFunctions, FactSheet};
 use crate::models::agents::agent_architect::AgentSolutionArchitect;
 use crate::models::agents::agent_backend::AgentBackendDeveloper;
+use crate::models::agents::agent_frontend::AgentFrontendDeveloper;
 use crate::models::general::llm::Message;
 use crate::ai_functions::aifunc_managing::convert_user_input_to_goal;
 use crate::helpers::general::extend_ai_function;
@@ -67,6 +68,7 @@ impl ManagingAgent {
   fn create_agents(&mut self) {
     self.add_agent(Box::new(AgentSolutionArchitect::new()));
     self.add_agent(Box::new(AgentBackendDeveloper::new()));
+    self.add_agent(Box::new(AgentFrontendDeveloper::new()));
   }
 
   // Private: Adds an agent
@@ -109,13 +111,13 @@ pub mod tests {
 
   #[tokio::test]
   async fn executes_building_a_website() {
-    let usr_request: &str = "need a full stack app that fetches weather data";
+    let usr_request: &str = "need a full stack app that fetches and tracks my fitness progress. Needs to include timezone info from the web.";
     let mut managing_agent: ManagingAgent = ManagingAgent::new(usr_request.to_string()).await.expect("Error creating agent");
 
     managing_agent.execute_project().await;
 
     let encoded_factsheet: String = serde_json::to_string(&managing_agent.factsheet).unwrap();
 
-    println!("{:?}", encoded_factsheet);
+    // println!("{:?}", encoded_factsheet);
   }
 }

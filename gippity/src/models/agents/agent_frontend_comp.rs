@@ -5,7 +5,13 @@ use crate::ai_functions::aifunc_frontend::{
   print_footer_navigation_react_component,
   print_react_typescript_hook_component
 };
-use crate::helpers::general::{save_frontend_code, ai_task_request, BACKEND_CODE_DIR};
+use crate::helpers::general::{
+  save_frontend_code, 
+  ai_task_request, 
+  read_frontend_code_contents,
+  BACKEND_CODE_DIR, 
+  FRONTEND_CODE_DIR
+};
 use crate::models::agents::agent_frontend::AgentFrontendDeveloper;
 use serde::{Serialize, Deserialize};
 use std::fs;
@@ -136,6 +142,11 @@ impl BuildComponent {
           "PageContent2" => &pages[1],
           _ => panic!("Page not recognised")
         };
+
+        // Extract file path
+        let file_path: String = self.filepath();
+        let react_hook_contents: String = read_frontend_code_contents(&file_path);
+        
 
         // Get Content Wireframe
 

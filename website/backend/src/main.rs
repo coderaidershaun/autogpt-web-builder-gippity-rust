@@ -1,16 +1,19 @@
 use actix_cors::Cors;
-use actix_web::{http::header, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{http::header, web, App, HttpServer, Responder, HttpResponse};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
 use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
-use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ForexPrice {
+pub struct FitnessProgress {
     pub id: u64,
-    pub name: String,
-    pub value: f64,
+    pub user_id: u64,
+    pub timezone: String,
+    pub progress: String,
+    pub timestamp: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -22,33 +25,37 @@ pub struct User {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Database {
-    forex_prices: HashMap<u64, ForexPrice>,
+    fitness_progress: HashMap<u64, FitnessProgress>,
     users: HashMap<u64, User>,
 }
 
 impl Database {
     fn new() -> Self {
         Self {
-            forex_prices: HashMap::new(),
+            fitness_progress: HashMap::new(),
             users: HashMap::new(),
         }
     }
 
-    // FOREX PRICE CRUD DATA RELATED
-    fn insert_forex_price(&mut self, forex_price: ForexPrice) {
-        self.forex_prices.insert(forex_price.id, forex_price);
+    // FITNESS PROGRESS DATA RELATED
+    fn insert_fitness_progress(&mut self, progress: FitnessProgress) {
+        self.fitness_progress.insert(progress.id, progress);
     }
 
-    fn get_forex_price(&self, id: &u64) -> Option<&ForexPrice> {
-        self.forex_prices.get(id)
+    fn get_fitness_progress(&self, id: &u64) -> Option<&FitnessProgress> {
+        self.fitness_progress.get(id)
     }
 
-    fn get_all_forex_prices(&self) -> Vec<&ForexPrice> {
-        self.forex_prices.values().collect()
+    fn get_all_fitness_progress(&self) -> Vec<&FitnessProgress> {
+        self.fitness_progress.values().collect()
     }
 
-    fn update_forex_price(&mut self, forex_price: ForexPrice) {
-        self.forex_prices.insert(forex_price.id, forex_price);
+    fn delete_fitness_progress(&mut self, id: &u64) {
+        self.fitness_progress.remove(id);
+    }
+
+    fn update_fitness_progress(&mut self, progress: FitnessProgress) {
+        self.fitness_progress.insert(progress.id, progress);
     }
 
     // USER DATA RELATED FUNCTIONS
@@ -77,38 +84,55 @@ impl Database {
 
 struct AppState {
     db: Mutex<Database>,
+    client: Client,
 }
 
-async fn create_forex_price(
-    app_state: web::Data<AppState>,
-    forex_price: web::Json<ForexPrice>,
-) -> impl Responder {
+#[derive(Serialize, Deserialize)]
+struct ExerciseData {
+    id: u64,
+    name: String,
+}
+
+async fn fetch_exercise_data(client: web::Data<Client>) -> impl Responder {
+    if let Ok(response) = client.get("https://wger.de/api/v2/exercise").send().await {
+        let exercise_data: Vec<ExerciseData> = response.json().await.unwrap_or_else(|_| vec![]);
+        HttpResponse::Ok().json(exercise_data)
+    } else {
+        HttpResponse::InternalServerError().finish()
+    }
+}
+
+async fn create_fitness_progress(app_state: web::Data<AppState>, progress: web::Json<FitnessProgress>) -> impl Responder {
     let mut db = app_state.db.lock().unwrap();
-    db.insert_forex_price(forex_price.into_inner());
+    db.insert_fitness_progress(progress.into_inner());
     let _ = db.save_to_file();
     HttpResponse::Ok().finish()
 }
 
-async fn read_forex_price(app_state: web::Data<AppState>, id: web::Path<u64>) -> impl Responder {
+async fn read_fitness_progress(app_state: web::Data<AppState>, id: web::Path<u64>) -> impl Responder {
     let db = app_state.db.lock().unwrap();
-    match db.get_forex_price(&id.into_inner()) {
-        Some(forex_price) => HttpResponse::Ok().json(forex_price),
+    match db.get_fitness_progress(&id.into_inner()) {
+        Some(progress) => HttpResponse::Ok().json(progress),
         None => HttpResponse::NotFound().finish(),
     }
 }
 
-async fn read_all_forex_prices(app_state: web::Data<AppState>) -> impl Responder {
+async fn read_all_fitness_progress(app_state: web::Data<AppState>) -> impl Responder {
     let db = app_state.db.lock().unwrap();
-    let forex_prices = db.get_all_forex_prices();
-    HttpResponse::Ok().json(forex_prices)
+    let fitness_progress = db.get_all_fitness_progress();
+    HttpResponse::Ok().json(fitness_progress)
 }
 
-async fn update_forex_price(
-    app_state: web::Data<AppState>,
-    forex_price: web::Json<ForexPrice>,
-) -> impl Responder {
+async fn update_fitness_progress(app_state: web::Data<AppState>, progress: web::Json<FitnessProgress>) -> impl Responder {
     let mut db = app_state.db.lock().unwrap();
-    db.update_forex_price(forex_price.into_inner());
+    db.update_fitness_progress(progress.into_inner());
+    let _ = db.save_to_file();
+    HttpResponse::Ok().finish()
+}
+
+async fn delete_fitness_progress(app_state: web::Data<AppState>, id: web::Path<u64>) -> impl Responder {
+    let mut db = app_state.db.lock().unwrap();
+    db.delete_fitness_progress(&id.into_inner());
     let _ = db.save_to_file();
     HttpResponse::Ok().finish()
 }
@@ -122,11 +146,11 @@ async fn register(app_state: web::Data<AppState>, user: web::Json<User>) -> impl
 
 async fn login(app_state: web::Data<AppState>, user: web::Json<User>) -> impl Responder {
     let db = app_state.db.lock().unwrap();
-
+    
     match db.get_user_by_name(&user.username) {
         Some(stored_user) if stored_user.password == user.password => {
             HttpResponse::Ok().body("Logged in!")
-        }
+        },
         _ => HttpResponse::BadRequest().body("Invalid username or password"),
     }
 }
@@ -140,6 +164,7 @@ async fn main() -> std::io::Result<()> {
 
     let data = web::Data::new(AppState {
         db: Mutex::new(db),
+        client: Client::new(),
     });
 
     HttpServer::new(move || {
@@ -156,12 +181,14 @@ async fn main() -> std::io::Result<()> {
                     .max_age(3600),
             )
             .app_data(data.clone())
-            .route("/forex_price", web::post().to(create_forex_price))
-            .route("/forex_price", web::get().to(read_all_forex_prices))
-            .route("/forex_price/{id}", web::get().to(read_forex_price))
-            .route("/forex_price/{id}", web::put().to(update_forex_price))
+            .route("/fitness_progress", web::post().to(create_fitness_progress))
+            .route("/fitness_progress", web::get().to(read_all_fitness_progress))
+            .route("/fitness_progress/{id}", web::get().to(read_fitness_progress))
+            .route("/fitness_progress/{id}", web::put().to(update_fitness_progress))
+            .route("/fitness_progress/{id}", web::delete().to(delete_fitness_progress))
             .route("/register", web::post().to(register))
             .route("/login", web::post().to(login))
+            .route("/exercises", web::get().to(fetch_exercise_data))
     })
     .bind("127.0.0.1:8080")?
     .run()
