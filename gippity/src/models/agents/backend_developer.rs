@@ -5,7 +5,6 @@ use crate::ai_functions::backend_developer::{
   print_rest_api_endpoints
 };
 use crate::helpers::general::{
-  extend_ai_function, 
   check_status_code, 
   read_code_template_contents, 
   save_backend_code,
@@ -14,10 +13,9 @@ use crate::helpers::general::{
 };
 use crate::helpers::command_line::confirm_safe_code;
 use crate::models::agent_basic::basic_agent::{BasicAgent, AgentState};
-use crate::models::agent_basic::basic_traits::BasicTraits;
+use crate::helpers::command_line::PrintCommand;
 use crate::models::agents::agent_traits::{SpecialFunctions, FactSheet, RouteObject};
-use crate::models::general::llm::Message;
-use crate::apis::call_request::call_gpt;
+use crate::helpers::general::ai_task_request;
 use async_trait::async_trait;
 
 use std::fs;
@@ -52,6 +50,112 @@ impl AgentBackendDeveloper {
       bug_count: 0
     }
   }
+
+  // AI Call: Write initial backend webserver code
+  async fn call_initial_backend_code(&mut self, factsheet: &mut FactSheet) {
+
+    // Extract Code Template
+    let code_template_str: String = read_code_template_contents();
+
+    // Concatenate instruction
+    let mut msg_context: String = format!(
+      "CODE_TEMPLATE: {} \n PROJECT_DESCRIPTION: {} \n",
+      code_template_str, factsheet.project_description);
+
+    // Adjust Instruction - Ignore creating external links
+    if factsheet.project_scope.unwrap().is_external_urls_required {
+      msg_context = format!("{} IMPORTANT IGNORE EXTERNAL DATA: Even though the PROJECT_DESCRIPTION will connect with external vendors for data,
+      you do not need to write any code linking to external data APIS. This webserver purely deals with CRUD operations.", 
+      msg_context);
+    }
+
+    // Adjust Instruction - Ignore creating external links
+    if !factsheet.project_scope.unwrap().is_user_login_and_logout {
+      msg_context = format!("{} IMPORTANT IGNORE USER REGISTRATION AND LOGIN: Even though the CODE_TEMPLATE shows how to manage User credentials,
+      you can REMOVE this functionality from your code and just use the basic CRUD operations as shown.", 
+      msg_context);
+    }
+
+    // Adjust Instruction - Ignore creating external links
+    if !factsheet.project_scope.unwrap().is_crud_required {
+      msg_context = format!("{} IMPORTANT IGNORE USER REGISTRATION AND LOGIN: Even though the CODE_TEMPLATE shows how to use CRUD,
+      you can REMOVE this functionality from your code and just use the basic User Registration and Login CRUD operations as shown.", 
+      msg_context);
+    }
+
+    // Retrieve AI Reponse
+    let ai_response: String = ai_task_request(
+      msg_context, 
+      &self.attributes.position, 
+      get_function_string!(print_backend_webserver_code), 
+      print_backend_webserver_code).await;
+    
+    // Save code and update state
+    save_backend_code(&ai_response);
+    factsheet.backend_code = Some(ai_response);
+  }
+
+
+  // AI Call: Write improved backend webserver code
+  async fn call_improved_backend_code(&mut self, factsheet: &mut FactSheet) {
+
+    // Structure message context
+    let msg_context: String = format!("CODE_TEMPLATE: {:?}, PROJECT_DESCRIPTION: {:?}. 
+      THIS FUNCTION ONLY OUTPUTS CODE. JUST OUTPUT THE CODE.", factsheet.backend_code, factsheet);
+
+    // Retrieve AI Reponse
+    let ai_response: String = ai_task_request(
+      msg_context, 
+      &self.attributes.position, 
+      get_function_string!(print_improved_webserver_code), 
+      print_improved_webserver_code).await;
+
+    // Update and continue
+    save_backend_code(&ai_response);
+    factsheet.backend_code = Some(ai_response);
+  }
+
+
+  // AI Call: Fix bugs in code
+  async fn call_fix_code_bugs(&mut self, factsheet: &mut FactSheet) {
+
+    // Structure message context
+    let msg_context: String = format!("BROKEN_CODE: {:?}, ERROR_BUGS: {:?}. 
+      THIS FUNCTION ONLY OUTPUTS CODE. JUST OUTPUT THE CODE.", factsheet.backend_code, self.bug_errors);
+
+    // Retrieve AI Reponse
+    let ai_response: String = ai_task_request(
+      msg_context, 
+      &self.attributes.position, 
+      get_function_string!(print_fixed_code), 
+      print_fixed_code).await;
+
+    // Update and continue
+    save_backend_code(&ai_response);
+    factsheet.backend_code = Some(ai_response);
+  }
+
+
+  // AI Call: Extract REST API Endpoints
+  async fn call_extract_rest_api_endpoints(&self) -> String {
+
+    // Get latest backend code from file (so can run separately when running cargo test)
+    let path: String = format!("{}/src/main.rs", BACKEND_CODE_DIR);
+    let backend_code: String = fs::read_to_string(path).expect("Something went wrong reading the file");
+
+    // Structure message context
+    let msg_context: String = format!("CODE_INPUT: {:?}", backend_code);
+
+    // Retrieve AI Reponse
+    let ai_response: String = ai_task_request(
+      msg_context, 
+      &self.attributes.position, 
+      get_function_string!(print_rest_api_endpoints), 
+      print_rest_api_endpoints).await;
+
+    // Return response
+    return ai_response;
+  }
 }
 
 
@@ -64,12 +168,10 @@ impl SpecialFunctions for AgentBackendDeveloper {
 
   async fn execute(&mut self, factsheet: &mut FactSheet) -> Result<(), Box<dyn std::error::Error>> {
 
-    // Extract Project Scope
-    let (project_scope, project_description) = match &factsheet.project_scope {
-      Some(project_scope) => {
-        (project_scope, &factsheet.project_description)
-      },
-      None => panic!("Project Scope required before calling Agent")
+    // Get project scope items
+    let (is_crud_required, is_user_login_and_logout): (bool, bool) = match &factsheet.project_scope {
+      Some(scope) => (scope.is_crud_required, scope.is_user_login_and_logout),
+      None => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Must contain project scope before starting on Backend work"))),
     };
 
     // Continue until finished
@@ -82,54 +184,14 @@ impl SpecialFunctions for AgentBackendDeveloper {
         // Write initial backend code
         AgentState::Discovery => {
 
-          // Guard: Ensure required
-          if !project_scope.is_crud_required && !project_scope.is_user_login_and_logout {
+          // Guard: Ensure backend is required
+          if !is_crud_required && !is_user_login_and_logout {
             self.attributes.state = AgentState::Finished;
             continue;
           }
 
-          // Extract Code Template
-          let code_template_str: String = read_code_template_contents();
-
-          // Concatenate instruction
-          let mut instruction: String = format!(
-            "CODE_TEMPLATE: {} \n PROJECT_DESCRIPTION: {} \n",
-            code_template_str, project_description);
-
-          // Adjust Instruction - Ignore creating external links
-          if project_scope.is_external_urls_required {
-            instruction = format!("{} IMPORTANT IGNORE EXTERNAL DATA: Even though the PROJECT_DESCRIPTION will connect with external vendors for data,
-            you do not need to write any code linking to external data APIS. This webserver purely deals with CRUD operations.", 
-            instruction);
-          }
-
-          // Adjust Instruction - Ignore creating external links
-          if !project_scope.is_user_login_and_logout {
-            instruction = format!("{} IMPORTANT IGNORE USER REGISTRATION AND LOGIN: Even though the CODE_TEMPLATE shows how to manage User credentials,
-            you can REMOVE this functionality from your code and just use the basic CRUD operations as shown.", 
-            instruction);
-          }
-
-          // Adjust Instruction - Ignore creating external links
-          if !project_scope.is_crud_required {
-            instruction = format!("{} IMPORTANT IGNORE USER REGISTRATION AND LOGIN: Even though the CODE_TEMPLATE shows how to use CRUD,
-            you can REMOVE this functionality from your code and just use the basic User Registration and Login CRUD operations as shown.", 
-            instruction);
-          }
-
-          // Extract list tables required
-          let func_message: Message = extend_ai_function(print_backend_webserver_code, instruction.as_str());
-
-          // Call GPT - Confirm tables required
-          println!("{} Agent: Writing first draft of backend code...", {self.attributes.get_position()});
-          let backend_code: String = call_gpt(vec!(func_message)).await
-            .expect("Failed to get response from LLM for writing backend code");
-
-          // Update tables required
-          save_backend_code(&backend_code);
-          factsheet.backend_code = Some(backend_code);
-
-          // Change state to working
+          // Write initial backend code
+          self.call_initial_backend_code(factsheet).await;
           self.attributes.state = AgentState::Working;
           continue;
         }
@@ -138,40 +200,18 @@ impl SpecialFunctions for AgentBackendDeveloper {
         AgentState::Working => {
 
           // Check and Enhance Code
-          if self.bug_count < 2 {
+          if self.bug_count == 0 {
 
-            // Extract database ai function message
-            let msg: String = format!("CODE_TEMPLATE: {:?}, PROJECT_DESCRIPTION: {:?}. 
-              THIS FUNCTION ONLY OUTPUTS CODE. JUST OUTPUT THE CODE.", factsheet.backend_code, factsheet);
-            let func_message: Message = extend_ai_function(print_improved_webserver_code, msg.as_str());
-  
-            // Call GPT - Code Improvements
-            println!("{} Agent: Enhancing code...", {self.attributes.get_position()});
-            let updated_backend_code: String = call_gpt(vec!(func_message)).await
-              .expect("Failed to get response from LLM for code enhancements");
-  
-            // Update and continue
-            save_backend_code(&updated_backend_code);
-            factsheet.backend_code = Some(updated_backend_code);
+            // Improve backend code
+            self.call_improved_backend_code(factsheet).await;
             self.attributes.state = AgentState::UnitTesting;
             continue;
 
           // Correct for errors
           } else {
 
-            // Extract database ai function message
-            let msg: String = format!("BROKEN_CODE: {:?}, ERROR_BUGS: {:?}. 
-              THIS FUNCTION ONLY OUTPUTS CODE. JUST OUTPUT THE CODE.", factsheet.backend_code, self.bug_errors);
-            let func_message: Message = extend_ai_function(print_fixed_code, msg.as_str());
-
-            // Call GPT - Fix bugs
-            println!("{} Agent: Fixing bugs...", {self.attributes.get_position()});
-            let updated_backend_code: String = call_gpt(vec!(func_message)).await
-              .expect("Failed to get response from LLM for bug fixes");
-
-            // Update and continue
-            save_backend_code(&updated_backend_code);
-            factsheet.backend_code = Some(updated_backend_code);
+            // Fix code bugs
+            self.call_fix_code_bugs(factsheet).await;
             self.attributes.state = AgentState::UnitTesting;
             continue;
           }
@@ -181,15 +221,15 @@ impl SpecialFunctions for AgentBackendDeveloper {
         AgentState::UnitTesting => {
 
           // Guard: Ensure safe code
-          println!("Backend Unit Testing: ensure safe code...");
+          PrintCommand::UnitTest.print_agent_message(self.attributes.position.as_str(), "Backend Unit Testing: ensure safe code...");
           let is_safe_code: bool = confirm_safe_code();
           if !is_safe_code {
             panic!("Better go work on some AI alignment instead...")
           }
 
           // Build backend application
-          println!("Backend Unit Testing: building...");
-          let mut build_backend_server: std::process::Output = Command::new("cargo")
+          PrintCommand::UnitTest.print_agent_message(self.attributes.position.as_str(), "Backend Unit Testing: building...");
+          let build_backend_server: std::process::Output = Command::new("cargo")
             .arg("build")
             .current_dir(BACKEND_CODE_DIR)
             .stdout(Stdio::piped())
@@ -199,7 +239,8 @@ impl SpecialFunctions for AgentBackendDeveloper {
 
           // Determine if build errors
           if build_backend_server.status.success() {
-            println!("Test server build successful...");
+            self.bug_count = 0;
+            PrintCommand::UnitTest.print_agent_message(self.attributes.position.as_str(), "Test server build successful...");
           } else {
             let error_arr: Vec<u8> = build_backend_server.stderr;
             let error_str: String = String::from_utf8(error_arr).unwrap();
@@ -208,22 +249,19 @@ impl SpecialFunctions for AgentBackendDeveloper {
             self.bug_count += 1;
             self.bug_errors = Some(error_str);
 
+            // Exit if too many bug counts
+            if self.bug_count > 2 {
+              PrintCommand::Issue.print_agent_message(self.attributes.position.as_str(), "Exiting agent. Too many bugs found in code.");
+              panic!("Error: Too many bugs")
+            }
+
             // Pass back for rework
             self.attributes.state = AgentState::Working;
+            continue;
           }
 
-          // Get latest backend code from file (so can run separately when running cargo test)
-          let path: String = format!("{}/src/main.rs", BACKEND_CODE_DIR);
-          let backend_code: String = fs::read_to_string(path).expect("Something went wrong reading the file");
-
-          // Construct func_message for URL extraction
-          let msg: String = format!("CODE_INPUT: {:?}", backend_code);
-          let func_message: Message = extend_ai_function(print_rest_api_endpoints, msg.as_str());
-
-          // Call GPT - Get API Endpoint JSON Schema
-          println!("{} Agent: Extracting REST API Endpoint Urls...", {self.attributes.get_position()});
-          let api_endpoints_str: String = call_gpt(vec!(func_message)).await
-            .expect("Failed to get response from LLM for extracting endpoints");
+          // Extract API Endpoints
+          let api_endpoints_str: String = self.call_extract_rest_api_endpoints().await;
 
           // Convert API Endpoints into Values
           let api_endpoints: Vec<RouteObject> = serde_json::from_str(api_endpoints_str.as_str())
@@ -239,7 +277,7 @@ impl SpecialFunctions for AgentBackendDeveloper {
           factsheet.api_endpoint_schema = Some(check_endpoints.clone());
 
           // Build backend application
-          println!("Backend Unit Testing: Starting server...");
+          PrintCommand::UnitTest.print_agent_message(self.attributes.position.as_str(), "Backend Unit Testing: Starting server...");
           let mut run_backend_server: std::process::Child = Command::new("cargo")
             .arg("run")
             .current_dir(BACKEND_CODE_DIR)
@@ -249,7 +287,7 @@ impl SpecialFunctions for AgentBackendDeveloper {
             .expect("Failed to run the backend application");
 
           // Sleep for 5 seconds
-          println!("Launching tests on server in 5 seconds...");
+          PrintCommand::UnitTest.print_agent_message(self.attributes.position.as_str(), "Launching tests on server in 5 seconds...");
           let seconds_sleep: Duration = Duration::from_secs(5);
           time::sleep(seconds_sleep).await;
 
@@ -261,18 +299,25 @@ impl SpecialFunctions for AgentBackendDeveloper {
 
           // Check status code
           for endpoint in check_endpoints {
-            println!("Testing endpoint '{}'...", endpoint.route);
+
+            // Confirm url testing
+            let testing_msg: String = format!("Testing endpoint '{}'...", endpoint.route);
+            PrintCommand::UnitTest.print_agent_message(self.attributes.position.as_str(), testing_msg.as_str());
+
+            // Test url
             let url: String = format!("http://localhost:8080{}", endpoint.route);
             match check_status_code(&client, &url).await {
               Ok(status_code) => {
                 if status_code != 200 {
-                  eprintln!("WARNING: Failed to call backend url endpoint {}", endpoint.route);
+                  let err_msg: String = format!("WARNING: Failed to call backend url endpoint {}", endpoint.route);
+                  PrintCommand::Issue.print_agent_message(self.attributes.position.as_str(), err_msg.as_str());
                 }
               }
               Err(e) => {
                 // kill $(lsof -t -i:8080)
                 run_backend_server.kill().expect("Failed to kill the backend web server");
-                println!("Error checking backend: {}", e)
+                let err_msg: String = format!("Error checking backend: {}", e);
+                PrintCommand::Issue.print_agent_message(self.attributes.position.as_str(), err_msg.as_str());
               },
             }
           }
@@ -281,7 +326,7 @@ impl SpecialFunctions for AgentBackendDeveloper {
           save_api_endpoints(&api_endpoints_str);
 
           // Kill backend server
-          println!("Backend testing complete - stopping backend server...");
+          PrintCommand::UnitTest.print_agent_message(self.attributes.position.as_str(), "Backend testing complete...");
           run_backend_server.kill().expect("Failed to kill the backend web server");
 
           // Update agent state to finished

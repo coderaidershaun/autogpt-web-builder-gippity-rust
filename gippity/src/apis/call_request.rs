@@ -5,7 +5,7 @@ use dotenv::dotenv;
 
 
 // Call Large Language Model (i.e. GPT-4)
-pub async fn call_gpt(messages: Vec<Message>) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn call_gpt(messages: Vec<Message>) -> Result<String, Box<dyn std::error::Error + Send>> {
     dotenv().ok();
 
     // Extract API Key information
@@ -17,13 +17,17 @@ pub async fn call_gpt(messages: Vec<Message>) -> Result<String, Box<dyn std::err
 
     // Create headers
     let mut headers: reqwest::header::HeaderMap = reqwest::header::HeaderMap::new();
-    headers.insert("authorization", reqwest::header::HeaderValue::from_str(&format!("Bearer {}", api_key))?);
-    headers.insert("OpenAI-Organization", reqwest::header::HeaderValue::from_str(api_org.as_str())?);
+    headers.insert("authorization", reqwest::header::HeaderValue::from_str(&format!("Bearer {}", api_key))
+        .map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?);
+
+    headers.insert("OpenAI-Organization", reqwest::header::HeaderValue::from_str(api_org.as_str())
+        .map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?);
+
     let client: Client = Client::builder()
         .default_headers(headers)
-        .build()?;
+        .build()
+        .map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?;
 
-    
     // Structure input chat
     let chat_completion: ChatCompletion = ChatCompletion {
         model: "gpt-4".to_string(),
@@ -43,9 +47,9 @@ pub async fn call_gpt(messages: Vec<Message>) -> Result<String, Box<dyn std::err
         .post(url)
         .json(&chat_completion)
         .send()
-        .await?
+        .await.map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?
         .json()
-        .await?;
+        .await.map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?;
 
     // Extract Response
     let response_text: String = res.choices[0].message.content.clone();

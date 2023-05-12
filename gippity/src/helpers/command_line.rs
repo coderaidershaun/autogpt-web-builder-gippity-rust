@@ -5,30 +5,47 @@ use crossterm::{
 use std::io::{stdin, stdout};
 
 
-// Print agent response
-pub fn print_agent_message(agent_pos: &str, agent_statement: &str) {
-  let mut stdout: std::io::Stdout = stdout();
+#[derive(PartialEq, Debug)]
+pub enum PrintCommand {
+  AICall,
+  UnitTest,
+  Issue
+}
 
-  // Print the agent statement in a specific color
-  stdout
-    .execute(SetForegroundColor(Color::Green))
-    .unwrap();
+impl PrintCommand {
+  
+  // Print agent response
+  pub fn print_agent_message(&self, agent_pos: &str, agent_statement: &str) {
+    let mut stdout: std::io::Stdout = stdout();
+  
+    // Decide print colour
+    let statement_colour: Color = match self {
+      PrintCommand::AICall => Color::Cyan,
+      PrintCommand::UnitTest => Color::Magenta,
+      PrintCommand::Issue => Color::Red,
+    };
 
-  // Print agent in colour
-  print!("Agent: {}: ", agent_pos);
-
-  // Reset color
-  stdout
-    .execute(SetForegroundColor(Color::Cyan))
-    .unwrap();
-
-  // Print message
-  println!("{}", agent_statement);
-
-  // Reset color
-  stdout
-      .execute(ResetColor)
+    // Print the agent statement in a specific color
+    stdout
+      .execute(SetForegroundColor(Color::Green))
       .unwrap();
+  
+    // Print agent in colour
+    print!("Agent: {}: ", agent_pos);
+  
+    // Reset color
+    stdout
+      .execute(SetForegroundColor(statement_colour))
+      .unwrap();
+  
+    // Print message
+    println!("{}", agent_statement);
+  
+    // Reset color
+    stdout
+        .execute(ResetColor)
+        .unwrap();
+  }
 }
 
 

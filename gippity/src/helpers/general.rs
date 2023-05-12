@@ -1,7 +1,7 @@
-use serde::de::DeserializeOwned;
 use crate::models::general::llm::Message;
 use crate::apis::call_request::call_gpt;
-use crate::helpers::command_line::print_agent_message;
+use crate::helpers::command_line::PrintCommand;
+use serde::de::DeserializeOwned;
 use reqwest::Client;
 
 use std::fs;
@@ -40,6 +40,39 @@ pub fn extend_ai_function(ai_func: fn(&str) -> &'static str, func_input: &str) -
 
 
 // Performs call to backend GPT
+pub async fn ai_task_request(
+  msg_context: String,
+  agent_position: &str,
+  agent_operation: &str,
+  function_pass: for<'a> fn(&'a str) -> &'static str,
+) -> String {
+
+  // Call GPT - Structure AI function
+  let func_message: Message = extend_ai_function(function_pass, &msg_context);
+
+  // Print agent statement
+  PrintCommand::AICall.print_agent_message(agent_position, agent_operation);
+
+  // Get agent response
+  let agent_response_res: Result<String, Box<dyn std::error::Error + Send>> = call_gpt(vec!(func_message.clone())).await;
+  
+  // Handle Success
+  let agent_response: String = match agent_response_res {
+    Ok(agent_response) => agent_response,
+
+    // Try again if error
+    Err(_) => {
+      call_gpt(vec!(func_message.clone())).await
+        .expect("Failed to get response from provider")
+    }
+  };
+   
+  // Return agent response
+  return agent_response;
+}
+
+
+// Performs call to backend GPT - and decode it
 pub async fn ai_task_request_decoded<T: DeserializeOwned>(
   msg_context: String,
   agent_position: &str,
@@ -47,16 +80,8 @@ pub async fn ai_task_request_decoded<T: DeserializeOwned>(
   function_pass: for<'a> fn(&'a str) -> &'static str,
 ) -> T {
 
-  // Call GPT - Structure AI function
-  let func_message: Message = extend_ai_function(function_pass, &msg_context);
-
-  // Get name of AI function being called
-  let ai_function_name: &str = get_function_string!(function_pass);
-
-  // Print agent statement
-  print_agent_message(agent_position, agent_operation);
-  let agent_response: String = call_gpt(vec!(func_message.clone())).await
-    .expect("Failed to get response from procider");
+  // Call GPT - Get agent response
+  let agent_response: String = ai_task_request(msg_context, agent_position, agent_operation, function_pass).await;
   
   // Decode and return message
   let decoded_response: T = serde_json::from_str(agent_response.as_str())

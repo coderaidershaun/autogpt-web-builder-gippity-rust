@@ -129,7 +129,7 @@ pub fn print_recommended_site_main_colours(_website_content: &str) {
 
 // Branding - Logo inner
 #[function_to_string]
-pub fn prints_svg_logo(_project_description_and_colours: &str) {
+pub fn print_svg_logo(_project_description_and_colours: &str) {
   /// INPUT: Takes in a PROJECT_DESCRIPTION and BRAND_COLOURS for a websites frontend
   /// FUNCTION: Creates a basic simple and flat looking LOGO via SVG JSX to best suit the website. Just an icon with no writing
   /// THIS IS AN EXAMPLE OF THE OUTPUT:
@@ -144,7 +144,7 @@ pub fn prints_svg_logo(_project_description_and_colours: &str) {
 
 // Branding - Logo component
 #[function_to_string]
-pub fn prints_completed_logo_with_brand_name_react_component(_website_specification: &str) {
+pub fn print_completed_logo_with_brand_name_react_component(_website_specification: &str) {
   /// INPUT: Takes in a WEBSITE_SPECIFICATION for a websites frontend.
   /// FUNCTION: Takes the logo from the SVG provided and adds a catchy PascalCase app name.
   /// NOTE: The Logo is based on the WEBSITE_SPECIFICATION information.
@@ -161,7 +161,7 @@ pub fn prints_completed_logo_with_brand_name_react_component(_website_specificat
   ///   )
   /// }
   /// export default Logo
-  /// IMPORTANT: Tailwind CSS is used for styling.
+  /// IMPORTANT: Tailwind CSS is used for styling. Does NOT use any extrernal libraries not included in this list: [axios, @mui/icons-material", react, tailwind]
   /// REMEMBER: This function only prints React Typescript component code. Nothing else. Just the code.
   println!(OUTPUT)
 }
@@ -194,6 +194,7 @@ pub fn print_header_navigation_react_component(_website_specification: &str) {
   /// export default Navigation
   /// DO NOT LEAVE ANY CODE UNFINISHED FOR LATER. CODE EVERYTHING INCLUDING THE SLIDER MENU NOW.
   /// IMPORTANT: This function only prints a full react component with completed typescript code, nothing else.
+  /// IMPORTANT: Tailwind CSS is used for styling. Does NOT use any extrernal libraries not included in this list: [axios, @mui/icons-material", react, tailwind]
   println!(OUTPUT)
 }
 
@@ -222,6 +223,7 @@ pub fn print_footer_navigation_react_component(_website_specification: &str) {
   /// }
   /// export default Footer
   /// IMPORTANT: This function only prints a full react component with completed typescript code, nothing else.
+  /// IMPORTANT: Tailwind CSS is used for styling. Does NOT use any extrernal libraries not included in this list: [axios, @mui/icons-material", react, tailwind]
   println!(OUTPUT)
 }
 
@@ -234,6 +236,7 @@ pub fn print_react_typescript_hook_component(_api_endpoints: &str) {
   /// FORMAT: Just prints the react typescript component, Nothing else.
   /// COMPONENT TITLE: The components title is "useCall"
   /// IMPORTANT: The component is fully working with typescript annotations types declared for everything or //@ts-ignore if unsure
+  /// IMPORTANT: Tailwind CSS is used for styling. Does NOT use any extrernal libraries not included in this list: [axios, @mui/icons-material", react, tailwind]
   println!(OUTPUT)
 }
 

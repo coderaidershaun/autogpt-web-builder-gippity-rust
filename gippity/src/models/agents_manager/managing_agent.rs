@@ -1,7 +1,6 @@
 use crate::models::agent_basic::basic_agent::{BasicAgent, AgentState};
 use crate::models::agents::agent_traits::{SpecialFunctions, FactSheet};
 use crate::models::agents::solution_architect::AgentSolutionArchitect;
-use crate::models::agents::url_manager::AgentUrlManager;
 use crate::models::agents::backend_developer::AgentBackendDeveloper;
 use crate::models::general::llm::Message;
 use crate::ai_functions::managing_agent::convert_user_input_to_goal;
@@ -31,7 +30,16 @@ impl ManagingAgent {
 
     // Convert AI Function to Goal
     let func_message: Message = extend_ai_function(convert_user_input_to_goal, &usr_req);
-    let project_description: String = call_gpt(vec!(func_message)).await?;
+    let project_description_res: Result<String, Box<dyn std::error::Error + Send>> = call_gpt(vec!(func_message)).await;
+
+    // Extract Project Description
+    let project_description: String = match project_description_res {
+      Ok(pd) => pd,
+      Err(e) => {
+        eprintln!("Error: {}", e);
+        panic!("Failed to retrieve project description")
+      },
+    };
 
     // Initialize agents
     let agents: Vec<Box<dyn SpecialFunctions>> = vec![];
@@ -58,7 +66,6 @@ impl ManagingAgent {
   // Important: Creates agents in order of project task execution
   fn create_agents(&mut self) {
     self.add_agent(Box::new(AgentSolutionArchitect::new()));
-    self.add_agent(Box::new(AgentUrlManager::new()));
     self.add_agent(Box::new(AgentBackendDeveloper::new()));
   }
 
@@ -77,7 +84,7 @@ impl ManagingAgent {
     for agent in &mut self.agents {
 
       // Handle if Solutions Architect
-      agent.execute(&mut self.factsheet).await;
+      let agent_res: Result<(), Box<dyn std::error::Error>> = agent.execute(&mut self.factsheet).await;
 
       // if agent.get_attributes_from_agent().position == "URL Manager" {
       //   break;
@@ -107,7 +114,7 @@ pub mod tests {
 
     managing_agent.execute_project().await;
 
-    let encoded_factsheet = serde_json::to_string(&managing_agent.factsheet).unwrap();
+    let encoded_factsheet: String = serde_json::to_string(&managing_agent.factsheet).unwrap();
 
     println!("{:?}", encoded_factsheet);
   }

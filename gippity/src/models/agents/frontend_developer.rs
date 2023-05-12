@@ -3,8 +3,8 @@ use crate::ai_functions::frontend_developer::{
   print_recommended_site_pages,
   print_recommended_site_pages_with_apis, 
   print_recommended_site_main_colours,
-  prints_svg_logo,
-  prints_completed_logo_with_brand_name_react_component,
+  print_svg_logo,
+  print_completed_logo_with_brand_name_react_component,
   print_header_navigation_react_component,
   print_footer_navigation_react_component,
   print_react_typescript_hook_component
@@ -20,22 +20,18 @@ use crate::helpers::general::{
   check_status_code, 
   read_code_template_contents, 
   save_api_endpoints,
+  ai_task_request_decoded,
+  ai_task_request,
   read_frontend_code_contents,
   BACKEND_CODE_DIR,
   FRONTEND_CODE_DIR
 };
-use crate::helpers::command_line::confirm_safe_code;
 use crate::models::agent_basic::basic_agent::{BasicAgent, AgentState};
-use crate::models::agent_basic::basic_traits::BasicTraits;
-use crate::models::general::llm::Message;
-use crate::apis::call_request::call_gpt;
+use crate::helpers::command_line::PrintCommand;
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use std::fs;
 use std::process::{Command, Stdio};
-use std::time::Duration;
-use tokio::time;
-use reqwest::Client;
 use std::collections::HashMap;
 
 
@@ -157,35 +153,33 @@ impl AgentFrontendDeveloper {
     let backend_code: String = fs::read_to_string(path).expect("Something went wrong reading the file");
 
     // Structure Message
-    let msg_context: String = format!("PROJECT_DESCRIPTION: {:?}, CODE_LOGIC: {:?}", 
-      project_description, backend_code);
-    let func_message: Message = extend_ai_function(print_recommended_site_pages, &msg_context);
+    let msg_context: String = format!("PROJECT_DESCRIPTION: {:?}, CODE_LOGIC: {:?}", project_description, backend_code);
 
-    // Call GPT - Obtain website pages
-    println!("{} Agent: Reviewing page architecture...", {self.attributes.get_position()});
-    let frontend_pages_schema: String = call_gpt(vec!(func_message)).await
-      .expect("Failed to get response from LLM");
-
-    // Decode pages schema
-    let decoded_pages_schema: Vec<SitePages> = serde_json::from_str(frontend_pages_schema.as_str())
-      .expect("Failed to decode JSON Schema");
+    // Call AI
+    let ai_response: Vec<SitePages> = ai_task_request_decoded::<Vec<SitePages>>(
+      msg_context, 
+      &self.attributes.position, 
+      get_function_string!(print_recommended_site_pages), 
+      print_recommended_site_pages).await;
 
     // Extract pages
-    let pages: Vec<String> = decoded_pages_schema
+    let pages: Vec<String> = ai_response
       .iter().filter_map(|item| Some(item.page_name.clone())).collect();
 
     // Assign pages to buildsheet
     self.buildsheet.pages = Some(pages.clone());
-    self.buildsheet.pages_descriptons = Some(decoded_pages_schema);
+    self.buildsheet.pages_descriptons = Some(ai_response);
   }
 
 
   // Assign API Routes to pages
   async fn assign_api_routes(&mut self, project_description: &String, external_api_urls: &Option<Vec<String>>) {
 
-    // Extract internal API schema and external api urls
+    // Extract internal API schema
     let path: String = format!("{}/api_endpoints.json", BACKEND_CODE_DIR);
     let internal_api_endpoints: String = fs::read_to_string(path).expect("Something went wrong reading the file");
+
+    // Extract external API endpoints
     let external_api_endpoints: String = match external_api_urls {
       Some(endpoints) => format!("{:?}", endpoints),
       None => String::from("")
@@ -198,19 +192,16 @@ impl AgentFrontendDeveloper {
       INTERNAL_API_ROUTES: {},
       EXTERNAL_API_ROUTES: {} 
     }}", project_description, self.buildsheet.pages, internal_api_endpoints, external_api_endpoints);
-    let func_message: Message = extend_ai_function(print_recommended_site_pages_with_apis, &msg_context);
 
-    // Call GPT - Assign endpoints to website pages
-    println!("{} Agent: Assigning endpoints to pages...", {self.attributes.get_position()});
-    let pages_apis_schema: String = call_gpt(vec!(func_message)).await
-      .expect("Failed to get response from LLM");
-
-    // Decode pages api assignment schema
-    let decoded_api_assign_schema: PageRoutes = serde_json::from_str(pages_apis_schema.as_str())
-      .expect("Failed to decode JSON Schema");
+    // Call AI
+    let ai_response: PageRoutes = ai_task_request_decoded::<PageRoutes>(
+      msg_context, 
+      &self.attributes.position, 
+      get_function_string!(print_recommended_site_pages_with_apis), 
+      print_recommended_site_pages_with_apis).await;
 
     // Add API assignments to buildsheet
-    self.buildsheet.api_assignments = Some(decoded_api_assign_schema);
+    self.buildsheet.api_assignments = Some(ai_response);
   }
 
 
@@ -220,19 +211,16 @@ impl AgentFrontendDeveloper {
     // Structure message
     let msg_context: String = format!("PROJECT_DESCRIPTION: {}, WEBSITE_CONTENT: {:?}", 
       project_description, self.buildsheet.pages_descriptons);
-    let func_message: Message = extend_ai_function(print_recommended_site_main_colours, &msg_context);
 
-    // Call GPT - Assign endpoints to website pages
-    println!("{} Agent: Defining brand colours...", {self.attributes.get_position()});
-    let brand_colours_list: String = call_gpt(vec!(func_message)).await
-      .expect("Failed to get response from LLM");
+    // Call AI
+    let ai_response: Vec<String> = ai_task_request_decoded::<Vec<String>>(
+      msg_context, 
+      &self.attributes.position, 
+      get_function_string!(print_recommended_site_main_colours), 
+      print_recommended_site_main_colours).await;
 
-    // Decode pages api assignment schema
-    let decoded_brand_colours: Vec<String> = serde_json::from_str(brand_colours_list.as_str())
-      .expect("Failed to decode JSON Schema");
-
-    // Add API assignments to buildsheet
-    self.buildsheet.brand_colours = Some(decoded_brand_colours);
+    // Add decoded brand colours
+    self.buildsheet.brand_colours = Some(ai_response);
   }
 
 
@@ -240,31 +228,30 @@ impl AgentFrontendDeveloper {
   async fn create_logo_component(&mut self, project_description: &String, file_path: &String) {
 
     // Structure message
-    let msg_context: String = format!("PROJECT_DESCRIPTION: {}, BRAND_COLOURS: {:?}", 
-      project_description, self.buildsheet.brand_colours);
-    let func_message: Message = extend_ai_function(prints_svg_logo, &msg_context);
+    let msg_context: String = format!("PROJECT_DESCRIPTION: {}, BRAND_COLOURS: {:?}", project_description, self.buildsheet.brand_colours);
 
-    // Call GPT - Build SVG Logo
-    println!("{} Agent: Building SVG Logo...", {self.attributes.get_position()});
-    let svg_logo_code: String = call_gpt(vec!(func_message)).await
-      .expect("Failed to get response from LLM");
+    // Retrieve AI Reponse
+    let ai_response_svg_logo: String = ai_task_request(
+      msg_context, 
+      &self.attributes.position, 
+      get_function_string!(print_svg_logo), 
+      print_svg_logo).await;
 
     // Structure message for logo creation
     let msg_context: String = format!("WEBSITE SPECIFICATION: {{
       SVG_LOGO: {},
       PAGES: {:?},
-    }}", project_description, svg_logo_code);
-    let func_message: Message = extend_ai_function(
-      prints_completed_logo_with_brand_name_react_component, 
-      &msg_context);
+    }}", project_description, ai_response_svg_logo);
 
-    // Call GPT - Build complete Logo
-    println!("{} Agent: Building Logo Component...", {self.attributes.get_position()});
-    let logo_component: String = call_gpt(vec!(func_message)).await
-      .expect("Failed to get response from LLM");
+    // Retrieve AI Reponse
+    let ai_response: String = ai_task_request(
+      msg_context, 
+      &self.attributes.position, 
+      get_function_string!(print_completed_logo_with_brand_name_react_component), 
+      print_completed_logo_with_brand_name_react_component).await;
 
-    // Save Component
-    save_frontend_code(file_path, &logo_component);
+    // Save Logo Component
+    save_frontend_code(file_path, &ai_response);
   }
 
 
@@ -274,21 +261,21 @@ impl AgentFrontendDeveloper {
     // Structure message
     let pages: &Vec<String> = self.buildsheet.pages.as_ref().expect("Missing pages");
     let msg_context: String = format!("WEBSITE_SPECIFICATION: {{
-      PROJECT_DESCRIPTION: {},
-      PAGES_WHICH_NEED_LINKS: {:?},
-      COLOUR_SCHEME: {:?}
-    }}", 
+        PROJECT_DESCRIPTION: {},
+        PAGES_WHICH_NEED_LINKS: {:?},
+        COLOUR_SCHEME: {:?}
+      }}", 
       project_description, pages, self.buildsheet.brand_colours);
-    let func_message: Message = extend_ai_function(
-      print_header_navigation_react_component, &msg_context);
 
-    // Call GPT - Build SVG Logo
-    println!("{} Agent: Building Navigation component...", {self.attributes.get_position()});
-    let navigation_component: String = call_gpt(vec!(func_message)).await
-      .expect("Failed to get response from LLM");
+    // Retrieve AI Reponse
+    let ai_response: String = ai_task_request(
+      msg_context, 
+      &self.attributes.position, 
+      get_function_string!(print_header_navigation_react_component), 
+      print_header_navigation_react_component).await;
 
-    // Save Component
-    save_frontend_code(file_path, &navigation_component);
+    // Save Navigation Header Component
+    save_frontend_code(file_path, &ai_response);
   }
 
 
@@ -298,21 +285,21 @@ impl AgentFrontendDeveloper {
     // Structure message
     let pages: &Vec<String> = self.buildsheet.pages.as_ref().expect("Missing pages");
     let msg_context: String = format!("WEBSITE_SPECIFICATION: {{
-      PROJECT_DESCRIPTION: {},
-      PAGES_WHICH_NEED_LINKS: {:?},
-      COLOUR_SCHEME: {:?}
-    }}", 
+        PROJECT_DESCRIPTION: {},
+        PAGES_WHICH_NEED_LINKS: {:?},
+        COLOUR_SCHEME: {:?}
+      }}", 
       project_description, pages, self.buildsheet.brand_colours);
-    let func_message: Message = extend_ai_function(
-      print_footer_navigation_react_component, &msg_context);
 
-    // Call GPT - Build SVG Logo
-    println!("{} Agent: Building Footer component...", {self.attributes.get_position()});
-    let navigation_component: String = call_gpt(vec!(func_message)).await
-      .expect("Failed to get response from LLM");
+    // Retrieve AI Reponse
+    let ai_response: String = ai_task_request(
+      msg_context, 
+      &self.attributes.position, 
+      get_function_string!(print_footer_navigation_react_component), 
+      print_footer_navigation_react_component).await;
 
-    // Save Component
-    save_frontend_code(file_path, &navigation_component);
+    // Save Footer Navigation Component
+    save_frontend_code(file_path, &ai_response);
   }
 
 
@@ -324,23 +311,24 @@ impl AgentFrontendDeveloper {
     let buggy_code: String = read_frontend_code_contents(&file_path);
 
     // Structure message
-    let msg_context: String = format!("ORIGINAL_CODE: {}, ERROR_MESSAGE: {:?}", 
-      buggy_code, self.error_code);
-    let func_message: Message = extend_ai_function(print_code_bugs_resolution, &msg_context);
+    let msg_context: String = format!("ORIGINAL_CODE: {}, ERROR_MESSAGE: {:?}", buggy_code, self.error_code);
 
-    // Call GPT - Correcting component code
-    println!("{} Agent: Working on component bug fixes...", {self.attributes.get_position()});
-    let updated_code: String = call_gpt(vec!(func_message)).await
-      .expect("Failed to get response from LLM");
+    // Retrieve AI Reponse
+    let ai_response: String = ai_task_request(
+      msg_context, 
+      &self.attributes.position, 
+      get_function_string!(print_code_bugs_resolution), 
+      print_code_bugs_resolution).await;
 
-    // Save Component
-    save_frontend_code(&file_path, &updated_code);
+    // Save corrected code
+    save_frontend_code(&file_path, &ai_response);
   }
 
 
   // Frontend component test
   async fn perform_component_test(&mut self) -> Result<(), String> {
-    println!("Testing component for {}...", self.operation_focus);
+    let test_statement = format!("Testing Component: {}", self.operation_focus);
+    PrintCommand::UnitTest.print_agent_message(self.attributes.position.as_str(), test_statement.as_str());
     let build_frontend_server: std::process::Output = Command::new("yarn")
       .arg("build")
       .current_dir(FRONTEND_CODE_DIR)
@@ -351,7 +339,7 @@ impl AgentFrontendDeveloper {
 
     // Determine if build errors
     if build_frontend_server.status.success() {
-      println!("Frontend component build successful...");
+      PrintCommand::UnitTest.print_agent_message(self.attributes.position.as_str(), "Component build test successful");
       self.bug_count = 0;
       return Ok(());
 
@@ -364,6 +352,8 @@ impl AgentFrontendDeveloper {
       self.bug_count += 1;
       self.error_code = Some(error_str);
       if self.bug_count >= 2 {
+        PrintCommand::Issue.print_agent_message(self.attributes.position.as_str(), "Too many code failures");
+        PrintCommand::Issue.print_agent_message(self.attributes.position.as_str(), "Remember: check frontend builds before retrying");
         panic!("Too many code failed attempts for {}", self.operation_focus);
       } else {
         return Err("Build failed".to_string())
@@ -411,6 +401,7 @@ impl SpecialFunctions for AgentFrontendDeveloper {
 
           // Proceed to Working status
           self.attributes.state = AgentState::Working;
+          continue;
         },
 
         // Get pages, api assignments and branding
@@ -491,7 +482,7 @@ impl SpecialFunctions for AgentFrontendDeveloper {
           self.attributes.state = AgentState::Finished;
         },
 
-        // Check Code Builds
+        // Perform full site testing
         AgentState::UnitTesting => {
 
 
@@ -514,7 +505,7 @@ pub mod tests {
 
 
   #[tokio::test]
-  async fn develops_and_saves_initial_schema() {
+  async fn develops_context_and_branding() {
 
     // Create agent instance and site purpose
     let mut agent: AgentFrontendDeveloper = AgentFrontendDeveloper::new();

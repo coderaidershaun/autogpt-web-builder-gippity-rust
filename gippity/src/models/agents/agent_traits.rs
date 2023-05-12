@@ -16,7 +16,7 @@ pub struct RouteObject {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
 pub struct ProjectScope {
   pub is_crud_required: bool,
   pub is_user_login_and_logout: bool,
@@ -24,7 +24,7 @@ pub struct ProjectScope {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct FactSheet {
   pub project_description: String,
   pub project_scope: Option<ProjectScope>,
